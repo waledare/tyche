@@ -1,0 +1,51 @@
+var form = document.getElementById("forecast");
+var theData;
+
+window myChart = 0;
+function drawGraph (zData, labs) {
+    const labels = labs;
+    const data = {
+        labels : labels,
+        datasets: [{
+          label: 'CPI Forecast',
+          backgroundColor: 'rgb(255, 99, 132)',
+          borderColor: 'rgb(255, 99, 132)',
+          data: zData,
+        }]
+    };
+    const config = {
+        type: 'line',
+        data: data,
+        options: {}
+    };
+    if (window.myChart instanceof  Chart) {
+        window.myChart.destroy();
+    }
+    myChart = new Chart(document.getElementById('forecastPlot'), config);
+}
+
+function runforecast () {
+    var horizon = document.getElementsByName('horizonLength')[0];
+    $.ajax({
+      url: '@{ForecastR}',
+      type: 'POST',
+      contentType: "application/json",
+      data: JSON.stringify(parseInt(horizon.value)),
+      success: function (dataPair) {
+          labels = dataPair[0];
+          data = dataPair[1];
+          data = data.map(parseFloat);
+          drawGraph (data, labels);
+      },
+      error: function (data) {
+        console.log("Error in updateAcquaintance");
+      },
+    });
+}
+form.addEventListener('submit', function(e){
+    e.preventDefault();
+    runforecast();
+});
+
+
+

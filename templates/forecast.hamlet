@@ -1,0 +1,7 @@
+<form id="forecast" action=@{ForecastR} method=post enctype=#{formEnctype}>
+    ^{formWidget}
+    <input type=submit>
+
+<div>
+    <canvas id="forecastPlot">
+
