@@ -12,18 +12,28 @@ forecastForm extra = do
     -- This should go into a utility file
     let settings name  str = (fromString str) {
             fsName = Just name
+            , fsId   = Just "horizonInput"
+            , fsAttrs = [("min", "1"), ("max", "120")]
         }
     (eaRes, eaView) <- mreq intField (settings "horizonLength" "Equity allocation") Nothing
+    let luc = toWidget [lucius| 
+                       #horizonInput{
+                           width: 25%;
+                           margin-top: 10px;
+                           margin-bottom: 10px;
+                           padding: 5px;
+                       }
+                     |] 
     let eaWidget = 
             [whamlet|
                 #{extra}
                 <div>
                     <div>
-                        Horizon
+                        Number of quarters in the future
                     <div>
                         ^{fvInput eaView}
             |]
-    return (eaRes , eaWidget)
+    return (eaRes , eaWidget >> luc)
 
 
 forecastWidget :: Route App -> Text -> Handler Widget 

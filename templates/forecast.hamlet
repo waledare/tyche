@@ -1,6 +1,8 @@
+<h1>
+    Inflation forecast for the U.S. economy
 <form id="forecast" action=@{ForecastR} method=post enctype=#{formEnctype}>
     ^{formWidget}
-    <input type=submit>
+    <input type=submit value="Run forecast">
 
 <div>
     <canvas id="forecastPlot">

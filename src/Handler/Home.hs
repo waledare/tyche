@@ -23,7 +23,8 @@ data FileForm = FileForm
 -- functions. You can spread them across multiple files if you are so
 -- inclined, or create a single monolithic file.
 getHomeR :: Handler Html
-getHomeR = do
+getHomeR = redirect ForecastR
+{-
     (formWidget, formEnctype) <- generateFormPost sampleForm
     let submission = Nothing :: Maybe FileForm
         handlerName = "getHomeR" :: Text
@@ -34,6 +35,7 @@ getHomeR = do
         aDomId <- newIdent
         setTitle "Welcome To Yesod!"
         $(widgetFile "homepage")
+-}
 
 postHomeR :: Handler Html
 postHomeR = do
