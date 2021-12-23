@@ -7,7 +7,6 @@ module Handler.Forecast where
 
 import Import
 import Widget.Horizon (forecastForm)
-import Utils.Analysis
 import Utils.Functions
 import qualified Prelude as P
 
@@ -23,7 +22,7 @@ getForecastR = do
 
 postForecastR :: Handler Value
 postForecastR = do
-    n <- requireJsonBody :: Handler Integer
+    n <- requireCheckJsonBody :: Handler Integer
     staticDir <- appStaticDir . appSettings <$> getYesod
     cpi <- liftIO $ P.readFile $ staticDir </> "data/cpi.txt"
     let cpiData = take (fromIntegral n) . mtail . P.lines $ cpi

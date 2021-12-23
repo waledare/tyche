@@ -4,8 +4,16 @@
 
 module  Utils.Functions where
 
+import Prelude (read)
 import Import
 import Data.List (unfoldr)
+
+toText :: Show a => a -> Text
+toText = pack . show 
+
+fromText :: Read b => Text -> b
+fromText = read . unpack 
+
 
 mtail :: [a] ->  [a]
 mtail (_:xs) = xs
@@ -32,5 +40,11 @@ getQuarters n = do
                                                 else yr
                                 in  Just ( (nextQ, nextYr), (i+1, nextQ, nextYr ))) (1, currentQuarter,y)
     return $ map (\(q,yy) -> "Q"<> show q <> " " <> show yy) qys
+
+mprint :: (MonadIO m, Show a) => a -> m ()
+mprint str = liftIO $ do
+    print "-------------- START ---------------------"
+    print str
+    print "--------------- END -----------------"
 
 

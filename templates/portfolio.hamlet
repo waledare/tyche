@@ -1,0 +1,16 @@
+<h1>
+    Portfolio level stress-testing
+<form id=#{symbolId}  action=@{PortfolioR} method=put enctype=#{formEnctype}>
+    ^{formWidget}
+    <input type=submit value="Add symbol">
+<table id=tableId>
+    <tr>
+        <thead>
+            <th>
+                Symbol
+            <th>
+                Security Name
+
+
+        
+

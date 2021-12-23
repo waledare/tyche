@@ -1,0 +1,30 @@
+var form = document.getElementById(#{symbolId});
+var tab = document.getElementById('tableId');
+
+function updatePortfolio () {
+    var symbol = document.getElementById('symbolInput');
+    $.ajax({
+      url: '@{PortfolioR}',
+      type: 'PUT',
+      contentType: "application/json",
+      data: JSON.stringify(parseInt(symbol.value)),
+      success: function (data) {
+          console.log(data);
+          var row = tab.insertRow(-1);
+          var symbName = row.insertCell(0);
+          var secName = row.insertCell(1);
+          symbName.innerHTML = data[0];
+          secName.innerHTML = data[1];
+      },
+      error: function (data) {
+        console.log("Error in updatePortfolio");
+      },
+    });
+}
+form.addEventListener('submit', function(e){
+    e.preventDefault();
+    updatePortfolio();
+});
+
+
+

@@ -1,10 +1,10 @@
 # Values formatted like "_env:YESOD_ENV_VAR_NAME:default_value" can be overridden by the specified environment variable.
 # See https://github.com/yesodweb/yesod/wiki/Configuration#overriding-configuration-values-with-environment-variables
 
-static-dir:     "_env:YESOD_STATIC_DIR:static"
-host:           "_env:YESOD_HOST:*4" # any IPv4 host
-port:           "_env:YESOD_PORT:3000" # NB: The port `yesod devel` uses is distinct from this value. Set the `yesod devel` port from the command line.
-ip-from-header: "_env:YESOD_IP_FROM_HEADER:false"
+static-dir:     "_env:STATIC_DIR:static"
+host:           "_env:HOST:*4" # any IPv4 host
+port:           "_env:_PORT:3000" # NB: The port `yesod devel` uses is distinct from this value. Set the `yesod devel` port from the command line.
+ip-from-header: "_env:IP_FROM_HEADER:false"
 
 # Default behavior: determine the application root from the request headers.
 # Uncomment to set an explicit approot
@@ -29,13 +29,28 @@ ip-from-header: "_env:YESOD_IP_FROM_HEADER:false"
 # See https://github.com/yesodweb/yesod/wiki/Configuration#parsing-numeric-values-as-strings
 
 database:
-  user:     "_env:YESOD_PGUSER:tyche"
-  password: "_env:YESOD_PGPASS:tyche"
-  host:     "_env:YESOD_PGHOST:localhost"
-  port:     "_env:YESOD_PGPORT:5432"
+  user:     "_env:PGUSER:ambiguityaversion"
+  password: "_env:PGPASS:ambiguityaversion"
+  host:     "_env:PGHOST:localhost"
+  port:     "_env:PGPORT:5432"
   # See config/test-settings.yml for an override during tests
-  database: "_env:YESOD_PGDATABASE:tyche"
-  poolsize: "_env:YESOD_PGPOOLSIZE:10"
+  database: "_env:PGDATABASE:ambiguityaversion"
+  poolsize: "_env:PGPOOLSIZE:10"
 
 copyright: 2022 Soborro Ltd
 #analytics: UA-YOURCODE
+
+yahoo:
+  crumb: "_env:YAHOO_CRUMB:https://uk.finance.yahoo.com/quote/AAPL/history"
+  crumbFile: "_env:YAHOO_CRUMB_FILE:Data/crumb"
+  endpoint: "_env:YAHOO_ENDPOINT:https://query2.finance.yahoo.com"
+  moduleType: "_env:YAHOO_MODULE:?modules="
+  finance: "_env:YAHOO_FINANCE:/v10/finance/"
+  prices: "_env:YAHOO_PRICES:https://query1.finance.yahoo.com/v8/finance/chart/"
+  range: "_env:YAHOO_RANGE:?range=3d&interval=1d"
+  fundamental: "_env:YAHOO_FUNDAMENTAL:quoteSummary/"
+  calendar: "_env:YAHOO_CALENDAR:https://finance.yahoo.com/calendar/earnings?day="
+
+nasdaq: 
+  traded: "_env:YAHOO_MODULE:Data/nasdaqtraded.txt"
+  other: "_env:YAHOO_MODULE:Data/otherlisted.txt"

@@ -1,0 +1,15 @@
+root: ..
+
+listeners:
+    # HTTP
+    - host: "*4" # Listen on all IPv4 hosts
+      port: 4321
+    # HTTPS
+    #- host: "*4"
+      #port: 443
+      #key: key.pem
+      #certificate: certificate.pem
+
+# env:
+#    key: value
+ip-from-header: true

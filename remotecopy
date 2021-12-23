@@ -1,0 +1,1 @@
+scp -v $1 wale@104.198.183.127:/home/wale 

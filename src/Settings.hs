@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
@@ -62,6 +63,12 @@ data AppSettings = AppSettings
 
     , appAuthDummyLogin         :: Bool
     -- ^ Indicate if auth dummy login should be enabled.
+
+    , appYahooConfig         :: YahooConfig
+    -- ^ yahoo configuration 
+
+    , appNasdaqConfig         :: NasdaqConfig
+    -- ^ nasdaq configuration 
     }
 
 instance FromJSON AppSettings where
@@ -91,6 +98,8 @@ instance FromJSON AppSettings where
         appAnalytics              <- o .:? "analytics"
 
         appAuthDummyLogin         <- o .:? "auth-dummy-login"      .!= dev
+        appYahooConfig            <- o .:  "yahoo"      
+        appNasdaqConfig            <- o .: "nasdaq"      
 
         return AppSettings {..}
 
@@ -147,3 +156,26 @@ combineScripts :: Name -> [Route Static] -> Q Exp
 combineScripts = combineScripts'
     (appSkipCombining compileTimeAppSettings)
     combineSettings
+
+-- Data import settings
+data NasdaqConfig = NasdaqConfig {
+    traded :: FilePath,
+    other :: FilePath
+} deriving (Generic, Show)
+
+instance FromJSON NasdaqConfig 
+
+data YahooConfig = YahooConfig {
+    crumb :: Text,
+    crumbFile :: Text,
+    endpoint :: Text,
+    moduleType :: Text,
+    finance :: Text,
+    fundamental :: Text,
+    calendar :: Text,
+    prices :: Text,
+    range :: Text
+} deriving (Generic, Show)
+
+instance FromJSON YahooConfig
+

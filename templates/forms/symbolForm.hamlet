@@ -1,0 +1,6 @@
+#{extra}
+<div>
+    <div>
+        Enter a stock symbol
+    <div>
+        ^{fvInput symbolView}

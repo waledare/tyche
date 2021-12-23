@@ -1,31 +1,32 @@
 # After you've edited this file, remove the following line to allow
 # `yesod keter` to build your bundle.
-user-edited: false
+user-edited: true
 
-# A Keter app is composed of 1 or more stanzas. The main stanza will define our
+# A Keter app is netposed of 1 or more stanzas. The main stanza will define our
 # web application. See the Keter documentation for more information on
 # available stanzas.
+
 stanzas:
 
   # Your Yesod application.
   - type: webapp
 
-    # Name of your executable. You are unlikely to need to change this.
-    # Note that all file paths are relative to the keter.yml file.
-    #
-    # The path given is for Stack projects. If you're still using cabal, change
-    # to
-    # exec: ../dist/build/tyche/tyche
     exec: ../dist/bin/tyche
 
-    # Command line options passed to your application.
+    env:
+        APPROOT: "https://www.ambiguityaversion.com"
+        IP_FROM_HEADER: "true"
+
     args: []
 
     hosts:
-      # You can specify one or more hostnames for your application to respond
-      # to. The primary hostname will be used for generating your application
-      # root.
-      - www.tyche.com
+      - ambiguityaversion.com
+      - ambiguityaversion.com:4321
+      - www.ambiguityaversion.com
+      - www.ambiguityaversion.com:4321
+      - localhost:4321
+
+    ssl: true
 
     # Enable to force Keter to redirect to https
     # Can be added to any stanza
@@ -34,7 +35,7 @@ stanzas:
   # Static files.
   - type: static-files
     hosts:
-      - static.tyche.com
+      - static.ambiguityaversion.com
     root: ../static
 
     # Uncomment to turn on directory listings.
@@ -44,9 +45,9 @@ stanzas:
   - type: redirect
 
     hosts:
-      - tyche.com
+      - ambiguityaversion.com
     actions:
-      - host: www.tyche.com
+      - host: www.ambiguityaversion.com
         # secure: false
         # port: 80
 
@@ -55,7 +56,7 @@ stanzas:
 
 # Use the following to automatically copy your bundle upon creation via `yesod
 # keter`. Uses `scp` internally, so you can set it to a remote destination
-# copy-to: user@host:/opt/keter/incoming/
+copy-to: wale@104.198.183.127:/opt/keter/incoming
 
 # You can pass arguments to `scp` used above. This example limits bandwidth to
 # 1024 Kbit/s and uses port 2222 instead of the default 22
@@ -66,5 +67,5 @@ stanzas:
 # If you would like to have Keter automatically create a PostgreSQL database
 # and set appropriate environment variables for it to be discovered, uncomment
 # the following line.
-# plugins:
-#   postgres: true
+plugins:
+   postgres: true
