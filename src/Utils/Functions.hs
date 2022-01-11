@@ -4,9 +4,13 @@
 
 module  Utils.Functions where
 
-import Prelude (read)
+import Prelude (read, Maybe(..))
 import Import
 import Data.List (unfoldr)
+
+maybeHead :: [a] -> Maybe a
+maybeHead [] = Nothing
+maybeHead (x:xs) = Just x
 
 toText :: Show a => a -> Text
 toText = pack . show 

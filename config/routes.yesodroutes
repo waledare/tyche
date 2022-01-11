@@ -16,3 +16,7 @@
 /forecast ForecastR  POST GET
 
 /portfolio PortfolioR  GET PUT
+
+/symbols SymbolsR GET
+
+/positions PositionsR GET

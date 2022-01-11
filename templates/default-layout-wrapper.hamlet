@@ -47,7 +47,10 @@ $newline never
       document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/,'js');
   <body>
     ^{pageBody pc}
-
+    <script>
+        if (typeof documentReady == "function") {
+            documentReady();
+        }
     $maybe analytics <- appAnalytics $ appSettings master
       <script>
         if(!window.location.href.match(/localhost/)){

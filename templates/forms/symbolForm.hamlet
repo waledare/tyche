@@ -1,6 +1,12 @@
 #{extra}
-<div>
-    <div>
-        Enter a stock symbol
-    <div>
-        ^{fvInput symbolView}
+<div .inputBox>
+    <div .inputPair>
+        <div .label>
+            Enter a stock symbol
+        <div >
+            ^{fvInput symbolView}
+    <div .inputPair>
+        <div .label>
+            Quantity
+        <div>
+            ^{fvInput quantityView}

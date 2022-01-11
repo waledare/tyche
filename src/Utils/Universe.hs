@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+
 module Utils.Universe where
 
 import Settings 
 import Utils.Functions
+import Utils.Types
 import Import (liftIO, appSettings, Handler, getYesod) 
 import Data.Text (Text, unpack, toLower, words)
 import qualified Data.Text as T
@@ -13,27 +15,6 @@ import Data.Aeson.Types (Value)
 import GHC.Generics
 import Control.Monad
 import qualified Data.Text.IO  as IO
-
-type Exchange = Text
-
-data Listing = Listing {
-    nasdaqTraded :: Bool,
-    symbol :: Text,
-    securityName :: Text,
-    exchange :: Text,
-    marketCategory :: Text,
-    etf :: Bool,
-    lotSize :: Text,
-    testIssue :: Bool,
-    financialStatus :: Text,
-    cqsSymbol :: Text,
-    nasdaqSymbol :: Text,
-    nextShares :: Text
-} deriving (Show, Generic)
-
-instance ToJSON Listing
-
-data UniverseSelector = ADR | Rest | All deriving (Show)
 
 getUniverse' :: UniverseSelector -> Handler [Listing]
 getUniverse' selector  =  do
@@ -51,7 +32,6 @@ getUniverse' selector  =  do
                 All    -> True  
     let nasdaqSettings = appNasdaqConfig . appSettings <$> getYesod
     NasdaqConfig n o <- nasdaqSettings 
-    mprint (n, o) 
     liftIO $
         filter f . parser . T.filter (/= '\r')  <$> liftM2 (<>) (IO.readFile n) (IO.readFile o)
 

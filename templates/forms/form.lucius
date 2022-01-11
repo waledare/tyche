@@ -10,7 +10,19 @@
   border-radius: 2px;
 }
 
-input[type="submit"]{
+input[type="submit"], input[type="button"]{
   border: 1px solid #c2c2c2 !important;
   border-radius: 2px;
+}
+
+.label {
+    color: #555;
+    margin-bottom: -0.5em;
+}
+.inputPair {
+    margin-bottom: 0.5em;
+}
+
+.inputBox{
+    margin-top: 0.5em;
 }

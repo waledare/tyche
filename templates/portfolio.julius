@@ -1,30 +1,123 @@
 var form = document.getElementById(#{symbolId});
-var tab = document.getElementById('tableId');
+var tab = document.getElementById('tableBody');
+
+var symbolList = [];
+var currentPortfolio = [];
 
 function updatePortfolio () {
     var symbol = document.getElementById('symbolInput');
-    $.ajax({
-      url: '@{PortfolioR}',
-      type: 'PUT',
-      contentType: "application/json",
-      data: JSON.stringify(parseInt(symbol.value)),
-      success: function (data) {
-          console.log(data);
-          var row = tab.insertRow(-1);
-          var symbName = row.insertCell(0);
-          var secName = row.insertCell(1);
-          symbName.innerHTML = data[0];
-          secName.innerHTML = data[1];
-      },
-      error: function (data) {
-        console.log("Error in updatePortfolio");
-      },
-    });
+    var choice = symbol.selectedIndex;
+    var sharesInput = document.getElementById('quantityInput');
+    var currentListing = currentPortfolio.map(function(x) {return x.listing;});
+    if(currentListing.includes(symbolList[choice])){
+        var tempIx = currentListing.indexOf(symbolList[choice]);
+        if(currentPortfolio[tempIx].quantity == sharesInput.value){
+            alert("Poasition already exists in your portfolio");
+        } else {
+            if(confirm (
+                'The selected security already exists in your portfolio. Would you like update the quantity to '
+                + sharesInput.value.toString() + '?'))
+                {
+                var oldSs = document.getElementById(
+                        'shares-' + symbolList[choice].symbol);
+                oldSs.innerHTML = sharesInput.value; 
+                currentPortfolio[tempIx].quantity = sharesInput.value;
+                }
+        } 
+    } else {
+       addPosition(symbolList[choice], sharesInput.value); 
+    }
 }
+
+function addPosition(listing, quantity ){
+    var row  = document.createElement('div');
+    row.classList.add('portRow');
+    var symbName = document.createElement('div');
+    symbName.classList.add('symbol');
+    var secName = document.createElement('div');
+    var shares = document.createElement('div');
+    shares.id = 'shares-' + listing.symbol;
+    var close = document.createElement('div');
+    close.classList.add('times');
+    symbName.innerHTML = listing.symbol;
+    secName.innerHTML = listing.securityName;
+    shares.innerHTML = quantity;
+    close.innerHTML = '&times;';
+    row.appendChild(close);
+    row.appendChild(symbName);
+    row.appendChild(secName);
+    row.appendChild(shares);
+    tab.appendChild(row);
+    currentPortfolio.push({listing: listing, quantity: quantity});
+    close.addEventListener('click', function(e){
+            var temp = currentPortfolio.filter(function(p){ 
+                return (p.listing != listing);
+                });
+            currentPortfolio = temp;
+            row.remove();
+        });
+}
+
 form.addEventListener('submit', function(e){
     e.preventDefault();
     updatePortfolio();
 });
 
+function getSymbolList () {
+    $.ajax({
+      url: '@{SymbolsR}',
+      type: 'GET',
+      contentType: "application/json",
+      success: function (data) {
+          symbolList = data;
+          var selectElement = document.getElementById("symbolInput");
+          var sym;
+          for(var i = 0; i < data.length ; i ++){
+              sym = data[i].symbol;
+              selectElement.add(new Option(sym,i ));
+          }
+      },
+      error: function (data) {
+        console.log("Error in getSymbolList");
+      },
+    });
+}
+function getPositions () {
+    $.ajax({
+      url: '@{PositionsR}',
+      type: 'GET',
+      contentType: "application/json",
+      success: function (data) {
+         var pos = data[0];
+         for (var i = 0; i < pos.length; i++){
+             addPosition(pos[i].listing, pos[i].quantity);
+         }
+      },
+      error: function (data) {
+        console.log("Error in getPositions");
+      },
+    });
+}
+function documentReady(){
+    getPositions();
+    getSymbolList();
+}
 
+document.getElementById('savePortfolio').addEventListener('click', function(e){
+    var lsQtyPair = currentPortfolio.map(function(p){
+        return {listing : p.listing, quantity : parseInt(p.quantity)};
+    });
+    $.ajax({
+      url: '@{PortfolioR}',
+      type: 'PUT',
+      data: JSON.stringify(lsQtyPair),
+      contentType: "application/json",
+      success: function (data) {
+          alert ("The portfolio has been updated");
+      },
+      error: function (data) {
+        console.log("Error in save portfolio call back");
+      },
+    });
+});
 

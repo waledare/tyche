@@ -1,22 +1,50 @@
-table{
-    width:100%;
-    color: #828282;
-    margin-top: 5%;
-    margin-bottom: 5%;
-}
-thead{
-    border-top: 1px solid #d2d2d2;
-    border-bottom: 1px solid #d2d2d2;
-   
+.times {
+    font-weight: bold;
+    display: flex;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
 }
 
-th {
-    padding-top: 1%;
-    padding-bottom: 1%;
+.times:hover{
+    background: #f1f1f1;
+    border-radius: 5px;
 }
-td{
-    width: 50%;
+.portRow:hover{
+    background: #fcfcfc;
 }
-tbody {
-    padding: 5%;
+.portRow{
+    display: grid;
+    grid-gap: 0.5em;
+    padding: 0.5em;
+}
+.portRow div{
+    display: flex;
+    align-items: center;
+}
+#portfolioGrid{
+    display: grid;
+    grid-template-row: 1fr;
+    grid-gap: 5em;
+}
+#portfolioTable{
+    margin-top: 1em;
+}
+#tableBody {
+    display: grid;
+    row-gap: 0.5em;
+}
+
+#tableHeader {
+    display: grid;
+    grid-template-columns : 0.5fr 2fr 4fr 2fr;
+    font-weight: bold;
+} 
+
+#tableHeader {
+}
+
+#tableBody > div {
+    display: grid;
+    grid-template-columns : 0.5fr 2fr 4fr 2fr;
 }
