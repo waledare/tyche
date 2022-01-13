@@ -20,3 +20,5 @@
 /symbols SymbolsR GET
 
 /positions PositionsR GET
+
+/stress StressR GET

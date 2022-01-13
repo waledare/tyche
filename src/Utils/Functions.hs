@@ -5,8 +5,16 @@
 module  Utils.Functions where
 
 import Prelude (read, Maybe(..))
+import Data.Maybe (fromJust)
 import Import
 import Data.List (unfoldr)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+
+secondsToUTC = posixSecondsToUTCTime . fromInteger
+
+mhead = fromJust . maybeHead
+
+mlast = mhead . reverse
 
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
@@ -18,10 +26,11 @@ toText = pack . show
 fromText :: Read b => Text -> b
 fromText = read . unpack 
 
-
 mtail :: [a] ->  [a]
 mtail (_:xs) = xs
 mtail []   = []
+
+
 
 getMonthYear :: UTCTime -> (Integer, Int)
 getMonthYear t =

@@ -8,6 +8,7 @@
 module Handler.Portfolio where
 
 import Utils.Universe
+import Utils.Yahoo.Portfolio
 import Utils.Functions (mprint, maybeHead)
 import Import
 import Data.List ((!!))
@@ -58,4 +59,5 @@ putPortfolioR = do
     selections <- requireCheckJsonBody :: Handler [Position]
     runDB $ upsert  (Portfolio userkey selections) 
                     [PortfolioPortfolio =. selections]
+    getPrices "AAPL" >>= mprint
     return $ toJSON ( "Success" :: Text) 

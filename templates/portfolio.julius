@@ -8,9 +8,9 @@ function updatePortfolio () {
     var symbol = document.getElementById('symbolInput');
     var choice = symbol.selectedIndex;
     var sharesInput = document.getElementById('quantityInput');
-    var currentListing = currentPortfolio.map(function(x) {return x.listing;});
-    if(currentListing.includes(symbolList[choice])){
-        var tempIx = currentListing.indexOf(symbolList[choice]);
+    var currentListing = currentPortfolio.map(function(x) {return x.listing.symbol;});
+    if(currentListing.includes(symbolList[choice].symbol)){
+        var tempIx = currentListing.indexOf(symbolList[choice].symbol);
         if(currentPortfolio[tempIx].quantity == sharesInput.value){
             alert("Poasition already exists in your portfolio");
         } else {

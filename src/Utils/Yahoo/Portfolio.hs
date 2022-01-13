@@ -1,16 +1,32 @@
+-- {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
+-- {-# LANGUAGE DeriveGeneric #-}
 module Utils.Yahoo.Portfolio where
-
-import Import (Handler, liftIO ,  appSettings, getYesod)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Utils.Functions (mtail, mhead, maybeHead, mlast,secondsToUTC)
+import Database.Persist.TH
+import Import (loadYamlSettings, 
+                PriceStats,
+                Handler, 
+                sort, 
+                useEnv, 
+                liftIO ,  
+                appSettings, 
+                getYesod)
+import Import hiding (init, head, tail, try, unpack) 
 import Utils.Yahoo.Crumb
 import Settings  
-import Data.Text (Text, unpack)
+import Prelude ( head, tail, init, read)
+import Data.Text (  Text, 
+                    unpack)
 import Network.HTTP.Conduit hiding (Response)
 import Data.Aeson hiding (Result)
+import Data.Maybe (fromJust)
 import GHC.Generics
 import Control.Monad
+import Data.Time.Clock ( diffUTCTime, nominalDay)
 import Control.Exception (try)
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.HashMap.Strict as HM
@@ -18,85 +34,24 @@ import qualified Data.HashMap.Strict as HM
 yahooSettings :: Handler YahooConfig
 yahooSettings = appYahooConfig . appSettings <$> getYesod
 
+
+yahooSettingsIO :: IO YahooConfig 
+yahooSettingsIO = do 
+    YahooConfig' yahoo <- loadYamlSettings["config/settings.yml"] [] useEnv
+    return yahoo 
+
 type Module = Text
 type Symbol = Text
 
+robustHttpIO :: YahooConfig -> String -> IO (Either HttpException C.ByteString)
+robustHttpIO yahooSettings url = do
+        crumbs <- getCrumbIO yahooSettings
+        try . simpleHttp $ url <> "&crumb=" <> unpack crumbs
 
-data Raw = Raw { fmt :: Maybe Text,
-                 longFmt :: Maybe Text,
-                 raw :: Maybe Double} 
-           deriving (Show, Generic)
-instance FromJSON Raw {-where
-    parseJSON (Object v) = Raw <$>
-                           v .:? "fmt" <*>
-                           v .:? "bookValue" <*>
-                           v .:? "priceToBook"
-    -- A non-Object value is of the wrong type, so fail.
-    parseJSON _          = mzero -}
-
-newtype  Result = Result {
-    result :: [DefaultKeyStats] 
-}deriving (Show, Generic)
-
-instance FromJSON Result
-
-data Ohlc = Ohlc {
-    volume :: [Double],
-    close :: [Double]
-}deriving (Show, Generic)
-
-instance FromJSON Ohlc
-newtype Indicator = Indicator {
-    quote :: [Ohlc]
-}deriving (Show, Generic)
-
-instance FromJSON Indicator
-
-data DefaultKeyStats = DefaultKeyStats {
-                            defaultKeyStatistics :: KeyStats }
-                        | Prices {
-                            timestamp :: [Double],
-                            indicators :: Indicator
-                        }
-                          deriving (Show, Generic)
-
-instance FromJSON DefaultKeyStats where
-    parseJSON (Object v) = 
-        case HM.lookup "defaultKeyStatistics" v of
-            Just _  -> DefaultKeyStats <$> v .: "defaultKeyStatistics" 
-            Nothing -> case HM.lookup "indicators" v of
-                        Just _  -> Prices <$> 
-                                    v .: "timestamp" <*> 
-                                    v .: "indicators" 
-                        Nothing -> mzero
-
-    -- A non-Object value is of the wrong type, so fail.
-    parseJSON _          = mzero 
-
-data KeyStats = KeyStats {
-        sharesOutstanding :: Raw,
-        bookValue :: Raw,
-        priceToBook ::  Raw}
-    deriving (Show, Generic)
-
-instance FromJSON KeyStats  
---instance FromJSON DefaultKeyStats
-
-newtype Chart = Chart {
-    chart :: Result 
-}deriving (Show, Generic)
-instance FromJSON Chart
-
-newtype Response = Response {
-    quoteSummary :: Result 
-}deriving (Show, Generic)
-
-instance FromJSON Response
+data MarketDataStatus = Unavailable | OutDated | UpToDate deriving (Eq, Show)
 
 robustHttp :: String -> Handler (Either HttpException C.ByteString)
-robustHttp url = do
-        crumbs <- getCrumb
-        liftIO . try . simpleHttp $ url <> "&crumb=" <> unpack crumbs
+robustHttp url =  yahooSettings >>= liftIO . flip robustHttpIO url
 
 getPricesUrl :: Symbol -> YahooConfig -> Text
 getPricesUrl symbol (YahooConfig _ _ _ _ _ _ _ x y) = x <> symbol <> y 
@@ -122,17 +77,95 @@ getCumReturn symbol = do
                             head . result $ ch
         _               -> return Nothing 
 
+type Range = String
+
+getPricesIO :: Range -> YahooConfig ->  Text -> IO (Maybe Chart)
+getPricesIO range yahooSettings symbol = do 
+    let url = unpack . getPricesUrl symbol $ yahooSettings
+        hurl = takeWhile (/= '5') url
+        turl = mtail . mtail . dropWhile (/= '5') $ url
+    either (const Nothing) decode 
+        <$> robustHttpIO yahooSettings (if null range then url else hurl <> range<> turl)
+    
 getPrices :: Text -> Handler (Maybe Chart)
-getPrices  symbol = do
-    url <- unpack . getPricesUrl symbol  <$> yahooSettings
-    xs <- robustHttp url
-    case xs of
-        Right x -> do
-            let mx :: Maybe Chart  = decode x
-            return mx
-        _ -> return Nothing
-
-
+getPrices  symbol = do 
+    let dated :: PriceStats ->  IO Bool
+        dated ps = do 
+            now <- getCurrentTime
+            let end =  priceStatsEnd ps 
+                (_, nowMonth, nowYear)  = toGregorian . utctDay $ now 
+                (_, endMonth, endYear)  = toGregorian . utctDay $ end 
+            return (if nowYear == endYear
+                        then nowMonth - endMonth > 1
+                        else diffUTCTime now end > 31 * nominalDay )
+    stat <- runDB $ map entityVal <$> 
+                    selectList [PriceStatsSymbol ==. symbol] [LimitTo 1]
+    dataStatus <-  
+           if null stat
+               then return Unavailable
+               else do
+                    itis <- liftIO . dated . fromJust . maybeHead $ stat 
+                    if itis
+                        then return OutDated 
+                        else return UpToDate
+    case dataStatus of
+        Unavailable -> do 
+            mChart <-yahooSettings >>= liftIO . flip (getPricesIO "50") symbol 
+            case mChart of
+                Just charts    -> do
+                    let mktDatas = result . chart $ charts 
+                    if  null mktDatas
+                        then return Nothing
+                        else do
+                                let mkt = mhead mktDatas 
+                                    ts  = sort $ map secondsToUTC $ 
+                                                    timestamp mkt
+                                    end = mlast ts
+                                    start = mhead ts
+                                runDB $ do
+                                    insert (Prices symbol mkt)
+                                    insert (PriceStats symbol start end)
+                                return . Just $ charts 
+                Nothing    -> return Nothing
+        OutDated -> do
+            now <- liftIO getCurrentTime 
+            let end = priceStatsEnd . fromJust . maybeHead $ stat
+                (_, nowMonth, nowYear)  = toGregorian . utctDay $ now 
+                (_, endMonth, endYear)  = toGregorian . utctDay $ end 
+                months = (nowYear - endYear) * 12 + nowMonth - endMonth + 1 
+                mm :: String
+                mm = show months  
+            mChart <-  yahooSettings >>= liftIO . flip (getPricesIO mm) symbol 
+            case mChart of
+                Just charts -> do
+                    let mktDatas = result . chart $ charts 
+                    if  null mktDatas
+                        then return Nothing
+                        else do 
+                                let mkt = mhead mktDatas 
+                                    newts = timestamp mkt
+                                    newcs = close . mhead . quote . 
+                                                indicators $ mkt
+                                ps <- runDB $ mhead . map entityVal <$> 
+                                        selectList [PricesSymbol ==. symbol]
+                                                   [LimitTo 1]
+                                let oldcs = close . mhead . quote . 
+                                                indicators . pricesPrices $ ps
+                                    ots   = timestamp . pricesPrices $ ps 
+                                    npairs = filter ( (`notElem` ots) . fst ) 
+                                                    $ zip newts newcs
+                                    uts = map fst npairs ++ ots
+                                    ucs = map snd npairs ++ oldcs
+                                    mcs = MarketData uts (Indicator [Ohlc ucs])
+                                runDB $ updateWhere  [PricesSymbol ==. symbol]
+                                                     [PricesPrices =. mcs]
+                                return . Just . Chart . Result $ [mcs]
+                Nothing -> return Nothing
+            return Nothing 
+        UpToDate -> do
+            mkts <- runDB $ map entityVal <$> 
+                            selectList [PricesSymbol ==. symbol][LimitTo 1]
+            return . Just . Chart . Result . map pricesPrices $  mkts
 
 sread :: String -> Double
 sread = read

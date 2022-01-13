@@ -11,24 +11,32 @@ import Data.Time.Clock
 import Control.Monad
 
 getCrumb :: Handler T.Text
-getCrumb = do 
-    filePath <- T.unpack . crumbFile . appYahooConfig . appSettings <$> getYesod
-    isOld <- liftIO $ 
-                (>) <$> (utctDay <$> getCurrentTime) 
-                     <*> (utctDay <$> getModificationTime filePath)
-    when isOld setCrumb
-    liftIO $ IO.readFile filePath
+getCrumb = do
+    settings  <- appYahooConfig . appSettings <$> getYesod
+    liftIO $ getCrumbIO settings
+
+getCrumbIO :: YahooConfig ->  IO T.Text
+getCrumbIO yahooSettings = do 
+    let filePath = T.unpack . crumbFile $ yahooSettings
+    isOld <- (>) <$> (utctDay <$> getCurrentTime) 
+                 <*> (utctDay <$> getModificationTime filePath)
+    when isOld $ setCrumbIO yahooSettings
+    IO.readFile filePath
 
 setCrumb :: Handler ()
-setCrumb = do
-    let yahooSettings = appYahooConfig . appSettings <$> getYesod
-    request <- liftIO .  parseRequest  =<< (T.unpack  . crumb <$> yahooSettings)
-    cs <- liftIO $ do
-            manager <- newManager tlsManagerSettings
-            head . map (decodeUtf8 . cookie_value) . destroyCookieJar . 
-                responseCookieJar <$> httpLbs request manager
-    d <- T.unpack . crumbFile <$> yahooSettings
-    liftIO $ IO.writeFile d cs 
+setCrumb = do 
+    yahooSettings <- appYahooConfig . appSettings <$> getYesod
+    liftIO $ setCrumbIO yahooSettings
+
+setCrumbIO ::  YahooConfig -> IO ()
+setCrumbIO yahooSettings = do
+    request <- parseRequest . T.unpack  . crumb $ yahooSettings
+    cs <- do
+        manager <- newManager tlsManagerSettings
+        head . map (decodeUtf8 . cookie_value) . destroyCookieJar . 
+            responseCookieJar <$> httpLbs request manager
+    let d = T.unpack . crumbFile $ yahooSettings
+    IO.writeFile d cs 
 
     
 

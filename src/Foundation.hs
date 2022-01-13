@@ -120,6 +120,11 @@ instance Yesod App where
                     , menuItemRoute = PortfolioR
                     , menuItemAccessCallback = isJust muser
                     }
+                , NavbarLeft $ MenuItem
+                    { menuItemLabel = "Stress test"
+                    , menuItemRoute = StressR
+                    , menuItemAccessCallback = isJust muser
+                    }
                 , NavbarRight $ MenuItem
                     { menuItemLabel = "Login"
                     , menuItemRoute = AuthR LoginR
@@ -174,7 +179,7 @@ instance Yesod App where
     isAuthorized SymbolsR _ = isAuthenticated
     isAuthorized PortfolioR _ = isAuthenticated
     isAuthorized PositionsR _ = isAuthenticated
-
+    isAuthorized StressR _ = isAuthenticated
     -- This function creates static content files in the static folder
     -- and names them based on a hash of their content. This allows
     -- expiration dates to be set far in the future without worry of

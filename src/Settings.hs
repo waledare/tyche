@@ -177,5 +177,10 @@ data YahooConfig = YahooConfig {
     range :: Text
 } deriving (Generic, Show)
 
-instance FromJSON YahooConfig
+instance FromJSON YahooConfig 
 
+newtype YahooConfig' = YahooConfig' {
+    yahoo :: YahooConfig
+} deriving (Generic, Show)
+
+instance FromJSON YahooConfig' 
