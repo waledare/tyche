@@ -5,8 +5,25 @@
 {-# LANGUAGE TypeFamilies #-}
 module Handler.Stress where
 
-import Import
+import Import hiding  (share)
 import Utils.Functions
+import Utils.Yahoo.Portfolio (getPrices)
+
+positionSeries :: Position -> Handler (Symbol, TimeSeries Double)
+positionSeries position = do 
+    let ticker = name position
+        quant  = share position 
+    mChart <- getPrices ticker 
+    case mChart of
+        Nothing -> return (ticker, TS [])
+        Just chart -> return (ticker , flip scalarMultTS (fromIntegral . snd $ quant) $ priceSeries' chart )
+
+portfolioSeries :: Portfolio -> Handler (TimeSeries Double) 
+portfolioSeries  (Portfolio _ ps) = do 
+    tss <- mapM (fmap snd . positionSeries) ps
+    if null tss
+        then return $ TS []
+        else return $ cumTS (+) tss 
 
 getStressR :: Handler Html
 getStressR = do
@@ -15,8 +32,10 @@ getStressR = do
      -- 2. Obtain historical data for all assets in portfolio
      -- 3. Compute the porfolio returns
      --}
-    userPortfolio <- runDB $ 
+    userPositions <- runDB $ 
         portfolioPortfolio . entityVal . mhead <$> selectList 
             [PortfolioUserId ==. userkey][LimitTo 1]
-    defaultLayout $ do
+    let userSymbols = map (symbol . listing) userPositions  
+    rmcharts <- mapM getPrices userSymbols
+    defaultLayout 
         $(widgetFile "stress")

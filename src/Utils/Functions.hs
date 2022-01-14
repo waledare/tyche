@@ -7,8 +7,62 @@ module  Utils.Functions where
 import Prelude (read, Maybe(..))
 import Data.Maybe (fromJust)
 import Import
+import Utils.Types
 import Data.List (unfoldr)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+
+
+merge :: Ord a => [[a]] -> [a]
+merge = sort . map mhead . group . concat 
+
+type Symbol = Text
+
+name :: Position -> Symbol 
+name = symbol . listing 
+
+tsValues :: TimeSeries a -> [Maybe a]
+tsValues (TS xs) = map snd  xs
+
+tsDates :: TimeSeries a -> [Day]
+tsDates (TS xs) = map fst xs
+
+scalarMultTS :: Num a => TimeSeries a -> a  -> TimeSeries a
+scalarMultTS ts x = TS $ zip (tsDates ts) ( map ( fmap  (* x)) $ tsValues ts) 
+
+binaryOpTS :: (Eq a, Num a) =>  (a -> a -> a) -> TimeSeries a -> TimeSeries a -> TimeSeries a
+binaryOpTS op (TS ats)  (TS bts) = 
+    let groups = group . concat $ [ats, bts]
+        f :: (Eq a, Num a) => (a->a->a) -> [(Day, Maybe a)] -> (Day, Maybe a)
+        f op xs | length xs == 1 = 
+                    let [(dt , _ )] = xs
+                    in  (dt, Nothing)
+        f op xs | length xs == 2 = 
+                let [ (day, av) ,(_, bv)] = xs
+                in  (day, (op) <$> av <*> bv) 
+                | otherwise  =  (fromGregorian 1900 1 1, Nothing)
+    in TS $ map (f op)  groups 
+
+addTS = binaryOpTS (+)
+multTS = binaryOpTS (*)
+
+cumTS f xs | length xs == 0 = TS []
+cumTS f xs | length xs == 1 = mhead xs
+           | otherwise = 
+               let  g [] t     = t
+                    g (x:xs) t = g xs (binaryOpTS f t x)
+               in   g (mtail xs) (mhead xs) 
+
+
+    
+priceSeries' :: Chart -> TimeSeries Double
+priceSeries' c =  
+    let vals = close . mhead . quote . indicators . mhead . result . chart $ c
+        ds   = map (utctDay . secondsToUTC) . 
+                    timestamp . mhead . result . chart $ c
+    in  TS (zip ds vals)
+
+share :: Position -> (Symbol, Integer)
+share  p = ( name  p, quantity p) 
 
 secondsToUTC = posixSecondsToUTCTime . fromInteger
 
@@ -41,7 +95,7 @@ getQuarters :: Integer -> IO [String]
 getQuarters n = do
     (y,m) <- getMonthYear <$> getCurrentTime
     let currentQuarter :: Integer
-        currentQuarter = ceiling $ ((fromIntegral m)::Double) / 3.0
+        currentQuarter = ceiling $ (fromIntegral m::Double) / 3.0
         nextQuarters cQ =  1 + mod cQ 4
         qys = unfoldr (\(i, cQ, yr) -> 
                         if i > n 

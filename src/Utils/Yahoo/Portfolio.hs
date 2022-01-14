@@ -68,14 +68,6 @@ computeReturns ps =
         ret x y = (y - x ) / x
     in zipWith ret pas fut
 
-getCumReturn :: Text -> Handler ( Maybe Double)
-getCumReturn symbol = do 
-    mchar <- getPrices symbol
-    case mchar of 
-        Just (Chart ch) -> return . Just . sum . computeReturns . close . 
-                            head . quote . indicators . 
-                            head . result $ ch
-        _               -> return Nothing 
 
 type Range = String
 

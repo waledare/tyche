@@ -20,12 +20,10 @@ Portfolio json
     userId UserId 
     portfolio [Position]
     UniquePortfolio userId 
-
 Prices json
     symbol Text
     prices MarketData
     UniquePrices symbol 
-
 PriceStats json
     symbol Text
     start UTCTime

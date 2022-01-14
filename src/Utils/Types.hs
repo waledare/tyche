@@ -12,11 +12,15 @@ import GHC.Generics
 import Data.Aeson hiding (Result)
 import Prelude
 import Data.Time.Clock (UTCTime)
+import Data.Time.Calendar (Day)
 import Data.Text (Text)
 import Control.Monad
 import qualified Data.HashMap.Strict as HM
 
 
+newtype TimeSeries a = TS {
+    observations :: [(Day, Maybe a)]
+} deriving (Show, Eq, Read)
 
 type Exchange = Text
 
@@ -69,7 +73,7 @@ newtype  Result = Result {
 instance FromJSON Result
 
 newtype Ohlc = Ohlc {
-    close :: [Double]
+    close :: [Maybe Double]
 }deriving (Show, Read, Generic)
 
 instance FromJSON Ohlc
