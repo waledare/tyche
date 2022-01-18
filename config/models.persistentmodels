@@ -29,3 +29,10 @@ PriceStats json
     start UTCTime
     end   UTCTime
     UniquePriceStats symbol 
+Macro json
+    symbol Text
+    series  Series
+MacroStats json
+    symbol Text
+    start Day
+    end   Day

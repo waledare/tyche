@@ -1,3 +1,6 @@
+
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -6,10 +9,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 
-module Utils.Types where 
+module Utils.Types  where 
 import Database.Persist.TH
 import GHC.Generics
-import Data.Aeson hiding (Result)
+import Data.Aeson hiding (Series, Result)
 import Prelude
 import Data.Time.Clock (UTCTime)
 import Data.Time.Calendar (Day)
@@ -17,10 +20,45 @@ import Data.Text (Text)
 import Control.Monad
 import qualified Data.HashMap.Strict as HM
 
-
+{-
 newtype TimeSeries a = TS {
     observations :: [(Day, Maybe a)]
 } deriving (Show, Eq, Read)
+-}
+
+data DataStatus = Unavailable | OutDated | UpToDate deriving (Eq, Show)
+
+type Series = TimeSeries Double
+data TimeSeries a  = TS {
+    units :: Maybe String,
+    observations :: [Observation a]
+} deriving (Show, Generic, Read, Eq)
+
+instance FromJSON a => FromJSON (TimeSeries a )
+instance ToJSON a => ToJSON (TimeSeries a )
+
+
+instance Semigroup (TimeSeries a) where
+    (<>) a b = undefined -- This would be a merge of the observations
+    
+
+instance Functor TimeSeries where
+    fmap f (TS au obs) = 
+        let g :: (a -> b) -> Observation a -> Observation b
+            g f (Observation s e d v) = Observation s e d (f <$> v)
+        in  TS au (map (g f) obs)
+
+data Observation a = Observation {
+    realtime_start :: Maybe Day,
+    realtime_end   :: Maybe Day,
+    date    :: Day,
+    value   :: Maybe a
+} deriving (Show, Generic, Read, Eq)
+
+instance FromJSON a => FromJSON (Observation a) 
+instance ToJSON a => ToJSON (Observation a) 
+
+
 
 type Exchange = Text
 
@@ -110,3 +148,6 @@ instance FromJSON ResponseMsg
 
 
 derivePersistField "MarketData"
+
+derivePersistField "Series"
+

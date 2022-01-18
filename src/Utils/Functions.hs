@@ -10,56 +10,73 @@ import Import
 import Utils.Types
 import Data.List (unfoldr)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Network.HTTP.Conduit (simpleHttp)
+import qualified Data.ByteString.Lazy.Char8 as C 
 
+
+
+getHttp :: String -> IO (Either IOError C.ByteString) 
+getHttp = try . simpleHttp
 
 merge :: Ord a => [[a]] -> [a]
 merge = sort . map mhead . group . concat 
 
 type Symbol = Text
 
+
 name :: Position -> Symbol 
 name = symbol . listing 
 
+tsNull (TS _ os) = null os 
+
 tsValues :: TimeSeries a -> [Maybe a]
-tsValues (TS xs) = map snd  xs
+tsValues  = map value . observations
 
 tsDates :: TimeSeries a -> [Day]
-tsDates (TS xs) = map fst xs
+tsDates  = map date . observations
+
+tsStart :: TimeSeries a -> [Maybe Day]
+tsStart  = map realtime_start . observations
+
+tsEnd :: TimeSeries a -> [Maybe Day]
+tsEnd  = map realtime_end . observations
 
 scalarMultTS :: Num a => TimeSeries a -> a  -> TimeSeries a
-scalarMultTS ts x = TS $ zip (tsDates ts) ( map ( fmap  (* x)) $ tsValues ts) 
+scalarMultTS ts x = fmap (*x) ts 
+
+nullOb = Observation Nothing Nothing (fromGregorian 1900 1 1)  Nothing
 
 binaryOpTS :: (Eq a, Num a) =>  (a -> a -> a) -> TimeSeries a -> TimeSeries a -> TimeSeries a
-binaryOpTS op (TS ats)  (TS bts) = 
+binaryOpTS op (TS au ats)  (TS bu bts) = 
     let groups = group . concat $ [ats, bts]
-        f :: (Eq a, Num a) => (a->a->a) -> [(Day, Maybe a)] -> (Day, Maybe a)
+        f :: (Eq a, Num a) => (a->a->a) -> [Observation a] -> Observation a
         f op xs | length xs == 1 = 
-                    let [(dt , _ )] = xs
-                    in  (dt, Nothing)
+                    let [Observation s e dt _] = xs
+                    in  Observation s e dt Nothing
         f op xs | length xs == 2 = 
-                let [ (day, av) ,(_, bv)] = xs
-                in  (day, (op) <$> av <*> bv) 
-                | otherwise  =  (fromGregorian 1900 1 1, Nothing)
-    in TS $ map (f op)  groups 
+                let [Observation s e dt av, Observation _ _ _ bv] = xs
+                in  Observation s e dt (op <$> av <*> bv) 
+                | otherwise  = nullOb 
+    in TS  ((<>) <$> au <*> bu)  $ map (f op)  groups 
 
 addTS = binaryOpTS (+)
 multTS = binaryOpTS (*)
 
-cumTS f xs | length xs == 0 = TS []
+cumTS :: (Eq a,Num a)  => (a -> a ->a) -> [TimeSeries a] -> TimeSeries a
+cumTS f xs | null xs  = TS Nothing []
 cumTS f xs | length xs == 1 = mhead xs
            | otherwise = 
-               let  g [] t     = t
-                    g (x:xs) t = g xs (binaryOpTS f t x)
-               in   g (mtail xs) (mhead xs) 
+               let  g :: (Eq a,Num a)  => (a -> a -> a) -> [TimeSeries a] -> TimeSeries a -> TimeSeries a
+                    g f [] t     = t
+                    g f (x:xs) t = g f xs (binaryOpTS f t x)
+               in   g f (mtail xs) (mhead xs) 
 
-
-    
 priceSeries' :: Chart -> TimeSeries Double
 priceSeries' c =  
     let vals = close . mhead . quote . indicators . mhead . result . chart $ c
         ds   = map (utctDay . secondsToUTC) . 
                     timestamp . mhead . result . chart $ c
-    in  TS (zip ds vals)
+    in  TS (Just "lin") (zipWith (Observation Nothing Nothing)  ds vals)
 
 share :: Position -> (Symbol, Integer)
 share  p = ( name  p, quantity p) 

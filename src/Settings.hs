@@ -179,6 +179,19 @@ data YahooConfig = YahooConfig {
 
 instance FromJSON YahooConfig 
 
+data FredConfig = FredConfig {
+    tsEndpoint :: Text,
+    api        :: Text,
+    fileType   :: Text 
+} deriving (Show, Read, Generic)
+
+instance FromJSON FredConfig
+
+newtype FredConfig' = FredConfig' {
+    fred :: FredConfig
+} deriving (Show, Read, Generic)
+
+instance FromJSON FredConfig'
 newtype YahooConfig' = YahooConfig' {
     yahoo :: YahooConfig
 } deriving (Generic, Show)

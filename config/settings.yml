@@ -40,6 +40,11 @@ database:
 copyright: 2022 Soborro Ltd
 #analytics: UA-YOURCODE
 
+fred:
+  tsEndpoint: "_env:FRED_ENDPOINT:https://api.stlouisfed.org/fred/series/observations?"
+  api: "_env:FRED_API:0840aba864f86b1c37e9f6bfd8cb0ce4"
+  fileType: "json"
+
 yahoo:
   crumb: "_env:YAHOO_CRUMB:https://uk.finance.yahoo.com/quote/AAPL/history"
   crumbFile: "_env:YAHOO_CRUMB_FILE:Data/crumb"

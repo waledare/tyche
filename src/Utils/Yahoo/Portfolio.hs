@@ -48,7 +48,6 @@ robustHttpIO yahooSettings url = do
         crumbs <- getCrumbIO yahooSettings
         try . simpleHttp $ url <> "&crumb=" <> unpack crumbs
 
-data MarketDataStatus = Unavailable | OutDated | UpToDate deriving (Eq, Show)
 
 robustHttp :: String -> Handler (Either HttpException C.ByteString)
 robustHttp url =  yahooSettings >>= liftIO . flip robustHttpIO url
