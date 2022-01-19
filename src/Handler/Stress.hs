@@ -8,6 +8,7 @@ module Handler.Stress where
 import Import hiding  (share)
 import Utils.Functions
 import Utils.Yahoo.Portfolio (getPrices)
+import Utils.TimeSeries
 
 
 positionSeries :: Position -> Handler (Symbol, TimeSeries Double)

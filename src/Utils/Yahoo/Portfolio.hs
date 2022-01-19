@@ -48,7 +48,6 @@ robustHttpIO yahooSettings url = do
         crumbs <- getCrumbIO yahooSettings
         try . simpleHttp $ url <> "&crumb=" <> unpack crumbs
 
-
 robustHttp :: String -> Handler (Either HttpException C.ByteString)
 robustHttp url =  yahooSettings >>= liftIO . flip robustHttpIO url
 
@@ -58,7 +57,6 @@ getPricesUrl symbol (YahooConfig _ _ _ _ _ _ _ x y) = x <> symbol <> y
 getKeyStatUrl :: Symbol -> YahooConfig -> Text
 getKeyStatUrl  symbol (YahooConfig _ _ ye ym yf yfu _ _ _)
     = ye <> yf <> yfu  <>  symbol <> ym <> "defaultKeyStatistics"
---test :: IO (Either String (KeyStats, Value))
 
 computeReturns :: [Double] -> [Double]
 computeReturns ps = 
@@ -66,7 +64,6 @@ computeReturns ps =
         pas = init ps
         ret x y = (y - x ) / x
     in zipWith ret pas fut
-
 
 type Range = String
 

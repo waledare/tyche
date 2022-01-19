@@ -7,6 +7,7 @@ import Settings
 import GHC.Generics
 import Utils.Functions hiding (Symbol) 
 import Utils.Types
+import Utils.TimeSeries
 import Data.Aeson.Types
 import Data.Aeson(decode, eitherDecode)
 import Data.Time.Calendar
@@ -76,28 +77,30 @@ getSeries  symbol = do
                         else return UpToDate
     case dataStatus of
         Unavailable -> do 
+            mprint $ (toText Unavailable) <> " " <> symbol
             eseries <- fredSettings >>= liftIO . flip getSeriesIO symbol 
             case eseries of
-                Right series    -> do
+                Right series    -> 
                     if  tsNull series
                         then return Nothing
                         else do
-                                let ts  = sort $ tsDates $ series
-                                    end = mlast ts
-                                    start = mhead ts
+                                let ss  = sort $ tsDates series
+                                    end = mlast ss
+                                    start = mhead ss
                                 runDB $ do
                                     insert (Macro symbol series)
                                     insert (MacroStats symbol start end)
                                 return . Just $ series 
                 Left _    -> return Nothing
         OutDated -> do
+            mprint $ (toText OutDated) <> " " <> symbol
             eseries <-fredSettings >>= liftIO . flip getSeriesIO symbol 
             case eseries of
-                Right series    -> do
+                Right series    -> 
                     if  tsNull series
                         then return Nothing
                         else do
-                                let ts  = sort $ tsDates $ series
+                                let ts  = sort $ tsDates series
                                     end = mlast ts
                                     start = mhead ts
                                 runDB $ do
@@ -108,6 +111,19 @@ getSeries  symbol = do
                                 return . Just $ series 
                 Left _    -> return Nothing
         UpToDate -> do
+            mprint $ (toText OutDated) <> " " <> symbol
             mkts <- runDB $ map entityVal <$> 
                             selectList [MacroSymbol ==. symbol][LimitTo 1]
             return . Just $  macroSeries . mhead $ mkts
+
+getInflation :: Handler (Maybe (TimeSeries Double))
+getInflation = getSeries inflation
+
+getInterestRate :: Handler (Maybe (TimeSeries Double))
+getInterestRate = getSeries interestrate
+
+getUnemployment :: Handler (Maybe (TimeSeries Double))
+getUnemployment = getSeries unemployment
+
+getGdp :: Handler (Maybe (TimeSeries Double))
+getGdp = getSeries gdp

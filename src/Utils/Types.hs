@@ -1,6 +1,5 @@
 
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -28,38 +27,6 @@ newtype TimeSeries a = TS {
 
 data DataStatus = Unavailable | OutDated | UpToDate deriving (Eq, Show)
 
-type Series = TimeSeries Double
-data TimeSeries a  = TS {
-    units :: Maybe String,
-    observations :: [Observation a]
-} deriving (Show, Generic, Read, Eq)
-
-instance FromJSON a => FromJSON (TimeSeries a )
-instance ToJSON a => ToJSON (TimeSeries a )
-
-
-instance Semigroup (TimeSeries a) where
-    (<>) a b = undefined -- This would be a merge of the observations
-    
-
-instance Functor TimeSeries where
-    fmap f (TS au obs) = 
-        let g :: (a -> b) -> Observation a -> Observation b
-            g f (Observation s e d v) = Observation s e d (f <$> v)
-        in  TS au (map (g f) obs)
-
-data Observation a = Observation {
-    realtime_start :: Maybe Day,
-    realtime_end   :: Maybe Day,
-    date    :: Day,
-    value   :: Maybe a
-} deriving (Show, Generic, Read, Eq)
-
-instance FromJSON a => FromJSON (Observation a) 
-instance ToJSON a => ToJSON (Observation a) 
-
-
-
 type Exchange = Text
 
 data Listing = Listing {
@@ -78,6 +45,7 @@ data Listing = Listing {
 } deriving (Show, Read, Generic)
 
 instance ToJSON Listing
+
 instance FromJSON Listing
 
 data UniverseSelector = ADR | Rest | All deriving (Show)
@@ -88,6 +56,7 @@ data Position = Position {
 } deriving (Show, Read, Generic)
 
 instance ToJSON Position 
+
 instance FromJSON Position
 
 derivePersistField "Position"
@@ -96,6 +65,7 @@ data Raw = Raw { fmt :: Maybe Text,
                  longFmt :: Maybe Text,
                  raw :: Maybe Double} 
            deriving (Read, Show, Generic)
+
 instance FromJSON Raw {-where
     parseJSON (Object v) = Raw <$>
                            v .:? "fmt" <*>
@@ -115,6 +85,7 @@ newtype Ohlc = Ohlc {
 }deriving (Show, Read, Generic)
 
 instance FromJSON Ohlc
+
 instance ToJSON Ohlc
 
 newtype Indicator = Indicator {
@@ -122,6 +93,7 @@ newtype Indicator = Indicator {
 }deriving (Read , Show, Generic)
 
 instance FromJSON Indicator
+
 instance ToJSON Indicator
 
 data MarketData = MarketData {
@@ -129,8 +101,8 @@ data MarketData = MarketData {
     indicators :: Indicator
 } deriving (Show, Generic, Read)
 
-
 instance FromJSON MarketData
+
 instance ToJSON MarketData
 
 newtype Chart = Chart {
@@ -145,9 +117,5 @@ newtype ResponseMsg = ResponseMsp {
 
 instance FromJSON ResponseMsg
 
-
-
 derivePersistField "MarketData"
-
-derivePersistField "Series"
 
