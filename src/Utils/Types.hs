@@ -105,7 +105,8 @@ instance FromJSON MarketData
 
 instance ToJSON MarketData
 
-newtype Chart = Chart {
+data Chart = Chart {
+    symbolName :: Text,
     chart :: Result 
 }deriving (Show, Generic)
 

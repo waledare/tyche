@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Utils.Fred.Series where
@@ -7,7 +8,7 @@ import Settings
 import GHC.Generics
 import Utils.Functions hiding (Symbol) 
 import Utils.Types
-import Utils.TimeSeries
+import Utils.TimeSeries hiding (observations)
 import Data.Aeson.Types
 import Data.Aeson(decode, eitherDecode)
 import Data.Time.Calendar
@@ -16,6 +17,24 @@ import Data.Text( Text)
 import Import 
 import Prelude (read)
 import Data.Maybe (fromJust)
+
+
+data FredSeries a  = FS {
+    units :: Maybe Text,
+    observations :: [Observation a]
+} deriving (Show, Generic, Read, Eq)
+
+instance FromJSON a => FromJSON (FredSeries a )
+
+instance ToJSON a => ToJSON (FredSeries a )
+
+instance Functor FredSeries where
+    fmap f (FS au obs) = 
+        let g :: (a -> b) -> Observation a -> Observation b
+            g f (Observation s e d v) = Observation s e d (f <$> v)
+        in  FS au (map (g f) obs)
+
+
 
 inflation :: Text
 inflation = "CPIAUCSL"
@@ -43,7 +62,7 @@ mkUrl (FredConfig endpt api ft) symbol =
                     <> api <> "&file_type=" <> ft
     in  unpack url 
 
-getSeriesIO :: FredConfig -> Text -> IO (Either String (TimeSeries Double))
+getSeriesIO :: FredConfig -> Text -> IO (Either String (FredSeries Double))
 getSeriesIO conf symbol = do 
     let url = mkUrl conf symbol 
     ebytes <- getHttp url
@@ -77,10 +96,10 @@ getSeries  symbol = do
                         else return UpToDate
     case dataStatus of
         Unavailable -> do 
-            mprint $ (toText Unavailable) <> " " <> symbol
             eseries <- fredSettings >>= liftIO . flip getSeriesIO symbol 
             case eseries of
-                Right series    -> 
+                Right series'    -> do
+                    let series = TS [symbol] Nothing (observations series')
                     if  tsNull series
                         then return Nothing
                         else do
@@ -93,10 +112,10 @@ getSeries  symbol = do
                                 return . Just $ series 
                 Left _    -> return Nothing
         OutDated -> do
-            mprint $ (toText OutDated) <> " " <> symbol
             eseries <-fredSettings >>= liftIO . flip getSeriesIO symbol 
             case eseries of
-                Right series    -> 
+                Right series'    -> do 
+                    let series = TS [symbol] Nothing (observations series')
                     if  tsNull series
                         then return Nothing
                         else do
@@ -127,3 +146,11 @@ getUnemployment = getSeries unemployment
 
 getGdp :: Handler (Maybe (TimeSeries Double))
 getGdp = getSeries gdp
+
+getMacro = do
+    mint <- getInterestRate
+    minf <- getInflation
+    mun  <- getUnemployment
+    ggdp <- getGdp
+    return $ map fromJust $ filter (isJust) [minf, mint, mun, ggdp] 
+

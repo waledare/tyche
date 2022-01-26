@@ -8,8 +8,9 @@ module Handler.Stress where
 import Import hiding  (share)
 import Utils.Functions
 import Utils.Yahoo.Portfolio (getPrices)
+import Utils.Fred.Series (getMacro)
 import Utils.TimeSeries
-
+import qualified Prelude as P
 
 positionSeries :: Position -> Handler (Symbol, TimeSeries Double)
 positionSeries position = do 
@@ -17,28 +18,32 @@ positionSeries position = do
         quant  = share position 
     mChart <- getPrices ticker 
     case mChart of
-        Nothing -> return (ticker, TS Nothing [])
+        Nothing -> return (ticker, TS [] Nothing [])
         Just chart -> return (ticker , 
-            fmap ( * (fromIntegral . snd $ quant)) $ priceSeries' chart )
+            (* (fromIntegral . snd $ quant)) <$> priceSeries' chart )
 
 portfolioSeries :: Portfolio -> Handler (TimeSeries Double) 
 portfolioSeries  (Portfolio _ ps) = do 
     tss <- mapM (fmap snd . positionSeries) ps
     if null tss
-        then return $ TS Nothing []
+        then return $ TS [] Nothing []
         else return $ cumTS (+) tss 
 
 getStressR :: Handler Html
 getStressR = do
     Entity userkey _ <- requireAuth
-    {-- 1. Get current portfolio weights
-     -- 2. Obtain historical data for all assets in portfolio
-     -- 3. Compute the porfolio returns
-     --}
-    userPositions <- runDB $ 
-        portfolioPortfolio . entityVal . mhead <$> selectList 
+    userPositions' <- runDB $ 
+        selectList 
             [PortfolioUserId ==. userkey][LimitTo 1]
-    let userSymbols = map (symbol . listing) userPositions  
-    rmcharts <- mapM getPrices userSymbols
-    defaultLayout 
-        $(widgetFile "stress")
+    if null userPositions' 
+        then redirect PortfolioR
+        else do
+            let userPositions = 
+                    portfolioPortfolio . entityVal . mhead $ userPositions' 
+            port <- portfolioSeries (Portfolio userkey userPositions)  
+            ms <- getMacro
+            let df = tsRowBind  (port : ms)
+                dfStr = printFrame df
+            liftIO $ P.writeFile "dfStr" $ unpack dfStr
+            defaultLayout 
+                    $(widgetFile "stress")

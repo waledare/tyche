@@ -67,7 +67,7 @@ computeReturns ps =
 
 type Range = String
 
-getPricesIO :: Range -> YahooConfig ->  Text -> IO (Maybe Chart)
+getPricesIO :: Range -> YahooConfig ->  Text -> IO (Maybe ResponseMsg)
 getPricesIO range yahooSettings symbol = do 
     let url = unpack . getPricesUrl symbol $ yahooSettings
         hurl = takeWhile (/= '5') url
@@ -101,7 +101,7 @@ getPrices  symbol = do
             mChart <-yahooSettings >>= liftIO . flip (getPricesIO "50") symbol 
             case mChart of
                 Just charts    -> do
-                    let mktDatas = result . chart $ charts 
+                    let mktDatas = result . quoteSummary $ charts 
                     if  null mktDatas
                         then return Nothing
                         else do
@@ -113,7 +113,7 @@ getPrices  symbol = do
                                 runDB $ do
                                     insert (Prices symbol mkt)
                                     insert (PriceStats symbol start end)
-                                return . Just $ charts 
+                                return . Just $ Chart symbol $ quoteSummary charts 
                 Nothing    -> return Nothing
         OutDated -> do
             now <- liftIO getCurrentTime 
@@ -126,7 +126,7 @@ getPrices  symbol = do
             mChart <-  yahooSettings >>= liftIO . flip (getPricesIO mm) symbol 
             case mChart of
                 Just charts -> do
-                    let mktDatas = result . chart $ charts 
+                    let mktDatas = result . quoteSummary $ charts 
                     if  null mktDatas
                         then return Nothing
                         else do 
@@ -147,13 +147,13 @@ getPrices  symbol = do
                                     mcs = MarketData uts (Indicator [Ohlc ucs])
                                 runDB $ updateWhere  [PricesSymbol ==. symbol]
                                                      [PricesPrices =. mcs]
-                                return . Just . Chart . Result $ [mcs]
+                                return . Just . Chart symbol . Result $ [mcs]
                 Nothing -> return Nothing
             return Nothing 
         UpToDate -> do
             mkts <- runDB $ map entityVal <$> 
                             selectList [PricesSymbol ==. symbol][LimitTo 1]
-            return . Just . Chart . Result . map pricesPrices $  mkts
+            return . Just . Chart symbol . Result . map pricesPrices $  mkts
 
 sread :: String -> Double
 sread = read
