@@ -105,6 +105,8 @@ instance FromJSON MarketData
 
 instance ToJSON MarketData
 
+
+
 data Chart = Chart {
     symbolName :: Text,
     chart :: Result 

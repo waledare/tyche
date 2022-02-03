@@ -28,6 +28,7 @@ PriceStats json
     symbol Text
     start UTCTime
     end   UTCTime
+    deriving Show
     UniquePriceStats symbol 
 Macro json
     symbol Text

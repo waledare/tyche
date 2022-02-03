@@ -52,7 +52,7 @@ yahoo:
   moduleType: "_env:YAHOO_MODULE:?modules="
   finance: "_env:YAHOO_FINANCE:/v10/finance/"
   prices: "_env:YAHOO_PRICES:https://query1.finance.yahoo.com/v8/finance/chart/"
-  range: "_env:YAHOO_RANGE:?range=50m&interval=1m"
+  range: "_env:YAHOO_RANGE:?range=200mo&interval=1mo"
   fundamental: "_env:YAHOO_FUNDAMENTAL:quoteSummary/"
   calendar: "_env:YAHOO_CALENDAR:https://finance.yahoo.com/calendar/earnings?day="
 

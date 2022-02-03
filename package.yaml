@@ -45,6 +45,7 @@ dependencies:
 - foreign-store
 - tagsoup
 - async
+- filepath
 
 # The library contains all of our application code. The executable
 # defined below is just a thin wrapper.

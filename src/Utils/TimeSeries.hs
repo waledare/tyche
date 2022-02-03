@@ -7,6 +7,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Utils.TimeSeries  where 
+
 import Database.Persist.TH
 import GHC.Generics
 import Data.Aeson hiding (Series, Result)
@@ -14,7 +15,7 @@ import Prelude
 import Utils.Functions
 import Utils.Types
 import Data.List (nub, sort, group)
-import Data.Maybe (mapMaybe, catMaybes, isJust)
+import Data.Maybe (isNothing, mapMaybe, catMaybes, isJust)
 import Data.Time.Clock (utctDay, UTCTime)
 import Data.Time.Calendar (fromGregorian, Day)
 import Data.Text (unlines, intercalate, Text)
@@ -22,6 +23,7 @@ import qualified Data.Text as T
 import Control.Monad
 import Network.HTTP.Conduit (simpleHttp)
 import qualified Data.ByteString.Lazy.Char8 as C 
+import Debug.Trace
 
 type Series = TimeSeries Double
 
@@ -29,9 +31,10 @@ data TimeSeries a  = TS {
     seriesName :: [Text],
     units :: Maybe String,
     observations :: [Observation a]
-} deriving (Show, Generic, Read, Eq)
+} deriving (Eq, Show, Generic, Read)
 
 instance FromJSON a => FromJSON (TimeSeries a )
+
 instance ToJSON a => ToJSON (TimeSeries a )
 
 instance Functor TimeSeries where
@@ -45,7 +48,10 @@ data Observation a = Observation {
     realtime_end   :: Maybe Day,
     date    :: Day,
     value   :: Maybe a
-} deriving (Show, Generic, Read, Eq)
+} deriving ( Show, Generic, Read)
+
+instance Eq (Observation a) where
+    (==) (Observation _ _ da _ ) (Observation _ _ db _ ) = da == db
 
 instance FromJSON a => FromJSON (Observation a) 
 
@@ -57,6 +63,8 @@ instance Eq a => Ord (Observation a) where
 derivePersistField "Series"
 
 tsNull (TS _ _ os) = null os 
+
+tsNA (TS _ _ os) = and $ map isNullOb os 
 
 tsValues :: TimeSeries a -> [Maybe a]
 tsValues  = map value . observations
@@ -75,10 +83,16 @@ scalarMultTS ts x = fmap (*x) ts
 
 nullOb = Observation Nothing Nothing (fromGregorian 1900 1 1)  Nothing
 
-binaryOpTS :: (Eq a, Num a) =>  (a -> a -> a) -> TimeSeries a -> TimeSeries a -> TimeSeries a
-binaryOpTS op (TS na au ats)  (TS nb bu bts) = 
-    let groups = group . concat $ [ats, bts]
-        f :: (Eq a, Num a) => (a->a->a) -> [Observation a] -> Observation a
+isNullOb (Observation _ _ _ Nothing) = True
+isNullOb _ = False
+
+binaryOpTS :: (Show a, Eq a, Num a) =>  (a -> a -> a) -> TimeSeries a -> TimeSeries a -> TimeSeries a
+binaryOpTS op a@(TS na au ats)  b@(TS nb bu bts) = 
+    let groups = map s allDates
+        allDates = nub $ concat [tsDates a , tsDates b]
+        s d = filter ((== d) . date) $ concat [ats , bts]   
+        eqDt a b  = date a == date b
+        f :: (Show a, Eq a, Num a) => (a->a->a) -> [Observation a] -> Observation a
         f op xs | length xs == 1 = 
                     let [Observation s e dt _] = xs
                     in  Observation s e dt Nothing
@@ -86,16 +100,19 @@ binaryOpTS op (TS na au ats)  (TS nb bu bts) =
                 let [Observation s e dt av, Observation _ _ _ bv] = xs
                 in  Observation s e dt (op <$> av <*> bv) 
                 | otherwise  = nullOb 
-    in TS  ((<>) <$> na <*> nb) ((<>) <$> au <*> bu)  $ map (f op)  groups 
+        result = TS  ((<>) <$> na <*> nb) ((<>) <$> au <*> bu)  $ map (f op)  groups
+    in if tsNA result || tsNull result
+            then trace ("Groups\n\n\n\n" ++ show groups ++ "\n\n\n\n" ++ show (sort $ concat [ats, bts])) result 
+            else trace ("binaryOpTS returned for " ++ show na ++ " and " ++ show nb)   result 
 
 addTS = binaryOpTS (+)
 multTS = binaryOpTS (*)
 
-cumTS :: (Eq a,Num a)  => (a -> a ->a) -> [TimeSeries a] -> TimeSeries a
+cumTS :: (Show a, Eq a,Num a)  => (a -> a ->a) -> [TimeSeries a] -> TimeSeries a
 cumTS f xs | null xs  = TS [] Nothing []
 cumTS f xs | length xs == 1 = mhead xs
            | otherwise = 
-               let  g :: (Eq a,Num a)  => (a -> a -> a) -> [TimeSeries a] -> TimeSeries a -> TimeSeries a
+               let  g :: (Show a, Eq a,Num a)  => (a -> a -> a) -> [TimeSeries a] -> TimeSeries a -> TimeSeries a
                     g f [] t     = t
                     g f (x:xs) t = g f xs (binaryOpTS f t x)
                in   g f (mtail xs) (mhead xs) 

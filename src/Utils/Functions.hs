@@ -14,6 +14,7 @@ import Control.Monad.IO.Class
 import Control.Exception
 import Network.HTTP.Conduit (simpleHttp)
 import qualified Data.ByteString.Lazy.Char8 as C 
+import Debug.Trace
 
 
 
@@ -25,10 +26,8 @@ merge = sort . map mhead . group . concat
 
 type Symbol = Text
 
-
 name :: Position -> Symbol 
 name = symbol . listing 
-
 
 share :: Position -> (Symbol, Integer)
 share  p = ( name  p, quantity p) 
@@ -52,8 +51,6 @@ fromText = read . unpack
 mtail :: [a] ->  [a]
 mtail (_:xs) = xs
 mtail []   = []
-
-
 
 getMonthYear :: UTCTime -> (Integer, Int)
 getMonthYear t =
@@ -83,4 +80,20 @@ mprint str = liftIO $ do
     print str
     print "--------------- END -----------------"
 
+mwrite :: (MonadIO m) => String -> m ()
+mwrite str = liftIO $ do
+    appendFile "debug" "-------------- START ---------------------"
+    appendFile "debug" str
+    appendFile "debug"  "--------------- END -----------------"
 
+
+groupBy :: Show a => (a -> a -> Bool) -> [a] -> [[a]]
+groupBy _ [] = []
+groupBy p' (x':xs') = (x' : ys') : zs'
+  where
+    (ys',zs') = go p' x' xs'
+    go p z (x:xs)
+      | p z x = trace (show z ++ "\t" ++ show x ++ "\n\n\n\n") $ (x : ys, zs)
+      | otherwise =  ([], (x : ys) : zs)
+      where (ys,zs) = go p x xs
+    go _ _ [] = ([], [])

@@ -18,7 +18,6 @@ import Import
 import Prelude (read)
 import Data.Maybe (fromJust)
 
-
 data FredSeries a  = FS {
     units :: Maybe Text,
     observations :: [Observation a]
@@ -33,8 +32,6 @@ instance Functor FredSeries where
         let g :: (a -> b) -> Observation a -> Observation b
             g f (Observation s e d v) = Observation s e d (f <$> v)
         in  FS au (map (g f) obs)
-
-
 
 inflation :: Text
 inflation = "CPIAUCSL"
@@ -82,17 +79,24 @@ getSeries  symbol = do
                 (_, nowMonth, nowYear)  = toGregorian . utctDay $ now 
                 (_, endMonth, endYear)  = toGregorian end 
             return (if nowYear == endYear
-                        then nowMonth - endMonth > 1
-                        else (nowYear - endYear) * 12 + (nowMonth - endMonth) > 1 )
+                        then nowMonth - endMonth > 2
+                        else (nowYear - endYear) * 12 + (nowMonth - endMonth) > 4 )
     stat <- runDB $ map entityVal <$> 
                     selectList [MacroStatsSymbol ==. symbol] [LimitTo 1]
-    dataStatus <-  
+    dataStatus <- 
            if null stat
                then return Unavailable
                else do
                     itis <- liftIO . dated . fromJust . maybeHead $ stat 
                     if itis
-                        then return OutDated 
+                        -- THIS MUST BE CHANGED
+                        --
+                        --
+                        --
+                        --
+                        --
+                        --
+                        then return UpToDate 
                         else return UpToDate
     case dataStatus of
         Unavailable -> do 
@@ -104,8 +108,8 @@ getSeries  symbol = do
                         then return Nothing
                         else do
                                 let ss  = sort $ tsDates series
-                                    end = mlast ss
                                     start = mhead ss
+                                    end = mlast ss
                                 runDB $ do
                                     insert (Macro symbol series)
                                     insert (MacroStats symbol start end)
@@ -120,8 +124,8 @@ getSeries  symbol = do
                         then return Nothing
                         else do
                                 let ts  = sort $ tsDates series
-                                    end = mlast ts
                                     start = mhead ts
+                                    end = mlast ts
                                 runDB $ do
                                     updateWhere  [MacroSymbol ==. symbol]
                                                      [MacroSeries =. series]
@@ -130,7 +134,6 @@ getSeries  symbol = do
                                 return . Just $ series 
                 Left _    -> return Nothing
         UpToDate -> do
-            mprint $ (toText OutDated) <> " " <> symbol
             mkts <- runDB $ map entityVal <$> 
                             selectList [MacroSymbol ==. symbol][LimitTo 1]
             return . Just $  macroSeries . mhead $ mkts

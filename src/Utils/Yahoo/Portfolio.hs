@@ -1,8 +1,7 @@
--- {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
--- {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Utils.Yahoo.Portfolio where
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Utils.Functions (mtail, mhead, maybeHead, mlast,secondsToUTC)
@@ -15,7 +14,7 @@ import Import (loadYamlSettings,
                 liftIO ,  
                 appSettings, 
                 getYesod)
-import Import hiding (init, head, tail, try, unpack) 
+import Import hiding (chart, init, head, tail, try, unpack) 
 import Utils.Yahoo.Crumb
 import Settings  
 import Prelude ( head, tail, init, read)
@@ -31,9 +30,13 @@ import Control.Exception (try)
 import qualified Data.ByteString.Lazy.Char8 as C
 import qualified Data.HashMap.Strict as HM
 
+data ChartRes = ChartRest {
+    chart :: Result 
+}deriving (Show, Generic)
+instance FromJSON ChartRes
+
 yahooSettings :: Handler YahooConfig
 yahooSettings = appYahooConfig . appSettings <$> getYesod
-
 
 yahooSettingsIO :: IO YahooConfig 
 yahooSettingsIO = do 
@@ -67,13 +70,20 @@ computeReturns ps =
 
 type Range = String
 
-getPricesIO :: Range -> YahooConfig ->  Text -> IO (Maybe ResponseMsg)
-getPricesIO range yahooSettings symbol = do 
+getPricesIO' :: Range -> YahooConfig ->  Text -> IO (Either String ChartRes)
+getPricesIO' range yahooSettings symbol = do 
     let url = unpack . getPricesUrl symbol $ yahooSettings
-        hurl = takeWhile (/= '5') url
-        turl = mtail . mtail . dropWhile (/= '5') $ url
-    either (const Nothing) decode 
+        hurl = takeWhile (/= '2') url
+        turl = mtail . mtail . mtail . dropWhile (/= '2') $ url
+    either (Left . show ) eitherDecode 
         <$> robustHttpIO yahooSettings (if null range then url else hurl <> range<> turl)
+ 
+getPricesIO :: Range -> YahooConfig ->  Text -> IO (Maybe ResponseMsg)
+getPricesIO range yahooSettings symbol = do
+    ch <- getPricesIO' range yahooSettings symbol
+    case ch of
+        Left _ -> return Nothing
+        Right res ->  return $ Just $ ResponseMsp $ chart res
     
 getPrices :: Text -> Handler (Maybe Chart)
 getPrices  symbol = do 
@@ -85,7 +95,7 @@ getPrices  symbol = do
                 (_, endMonth, endYear)  = toGregorian . utctDay $ end 
             return (if nowYear == endYear
                         then nowMonth - endMonth > 1
-                        else diffUTCTime now end > 31 * nominalDay )
+                        else diffUTCTime now end > 31 * 1 * nominalDay )
     stat <- runDB $ map entityVal <$> 
                     selectList [PriceStatsSymbol ==. symbol] [LimitTo 1]
     dataStatus <-  
@@ -98,7 +108,7 @@ getPrices  symbol = do
                         else return UpToDate
     case dataStatus of
         Unavailable -> do 
-            mChart <-yahooSettings >>= liftIO . flip (getPricesIO "50") symbol 
+            mChart <-yahooSettings >>= liftIO . flip (getPricesIO "200") symbol 
             case mChart of
                 Just charts    -> do
                     let mktDatas = result . quoteSummary $ charts 
@@ -108,14 +118,16 @@ getPrices  symbol = do
                                 let mkt = mhead mktDatas 
                                     ts  = sort $ map secondsToUTC $ 
                                                     timestamp mkt
-                                    end = mlast ts
                                     start = mhead ts
+                                    end = mlast ts
                                 runDB $ do
                                     insert (Prices symbol mkt)
-                                    insert (PriceStats symbol start end)
+                                    let newStats = PriceStats symbol start end
+                                    insert newStats 
                                 return . Just $ Chart symbol $ quoteSummary charts 
                 Nothing    -> return Nothing
         OutDated -> do
+            error $ unpack symbol
             now <- liftIO getCurrentTime 
             let end = priceStatsEnd . fromJust . maybeHead $ stat
                 (_, nowMonth, nowYear)  = toGregorian . utctDay $ now 
@@ -145,8 +157,12 @@ getPrices  symbol = do
                                     uts = map fst npairs ++ ots
                                     ucs = map snd npairs ++ oldcs
                                     mcs = MarketData uts (Indicator [Ohlc ucs])
-                                runDB $ updateWhere  [PricesSymbol ==. symbol]
+                                    newEnd = secondsToUTC $ mhead newts
+                                runDB $ do 
+                                    updateWhere  [PricesSymbol ==. symbol]
                                                      [PricesPrices =. mcs]
+                                    updateWhere [PriceStatsSymbol ==. symbol]
+                                                    [PriceStatsEnd =. newEnd]
                                 return . Just . Chart symbol . Result $ [mcs]
                 Nothing -> return Nothing
             return Nothing 

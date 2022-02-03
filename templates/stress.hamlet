@@ -1,4 +1,4 @@
 <h1> 
     Portfolio stress testing
 <div>
-    #{dfStr}
+    ^{formWidget}

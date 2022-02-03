@@ -59,5 +59,4 @@ putPortfolioR = do
     selections <- requireCheckJsonBody :: Handler [Position]
     runDB $ upsert  (Portfolio userkey selections) 
                     [PortfolioPortfolio =. selections]
-    getPrices "AAPL" >>= mprint
     return $ toJSON ( "Success" :: Text) 

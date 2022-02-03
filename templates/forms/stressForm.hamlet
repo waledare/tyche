@@ -1,0 +1,17 @@
+<div .inputBox>
+    <div .inputPair> 
+        <div .label>
+            Inflation Rate
+        <div> 
+            ^{fvInput inflationView}
+    <div .inputPair> 
+        <div .label>
+            Interest Rate
+        <div> 
+            ^{fvInput interestView}
+    <div .inputPair> 
+        <div .label>
+            Unemployment Rate
+        <div> 
+            ^{fvInput unemploymentView}
+        
