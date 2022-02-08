@@ -1,0 +1,13 @@
+.sliderRow {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    grid-column-gap: 1em;
+}
+
+.valueWindow {
+    border: 1px solid #dedede;
+    min-width: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

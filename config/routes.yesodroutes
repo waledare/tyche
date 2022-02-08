@@ -21,4 +21,4 @@
 
 /positions PositionsR GET
 
-/stress StressR GET
+/stress StressR GET POST

@@ -1,10 +1,30 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE QuasiQuotes #-}
+
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module  Utils.Functions where
+import Yesod.Form.Fields
+import Yesod.Core
+import Yesod.Form.Types
+import Yesod.Form.Functions
+import Data.Text.Read
+import Debug.Trace
+
 
 import Data.Text (unpack, pack, Text)
+import qualified Data.Text as T
 import Data.Maybe (fromJust)
+import Yesod.Core
 import Utils.Types
 import Data.List (group, sort, unfoldr)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -15,6 +35,52 @@ import Control.Exception
 import Network.HTTP.Conduit (simpleHttp)
 import qualified Data.ByteString.Lazy.Char8 as C 
 import Debug.Trace
+import Yesod.Form.Fields
+import Yesod.Form.Types
+debug :: String -> a -> a
+debug msg a = 
+    let open  = "----------DEBUG-----------\n\n"
+        close = "\n\n----------DEBUG-----------\n"
+    in  trace (open ++ msg ++ close) a
+
+
+prependZero :: Text -> Text
+prependZero t0 = if T.null t1
+                 then t1
+                 else if T.head t1 == '.'
+                      then '0' `T.cons` t1
+                      else if "-." `T.isPrefixOf` t1
+                           then "-0." `T.append` (T.drop 2 t1)
+                           else t1
+
+  where t1 = T.dropWhile (==' ') t0
+
+{-
+rangeField :: Monad m => RenderMessage (HandlerSite m) FormMessage => Field m Text
+rangeField  = Field
+    { fieldParse = parseHelper Right
+        , fieldView = \theId name attrs val isReq ->
+            [whamlet|
+                $newline never
+                    <input id="#{theId}" name="#{name}" *{attrs} type="range">
+            |]
+        , fieldEnctype = UrlEncoded
+    }
+-}
+rangeField :: Monad m => RenderMessage (HandlerSite m) FormMessage => Field m Double
+rangeField  = Field
+    { fieldParse = parseHelper $ \s ->
+        case Data.Text.Read.double (prependZero s) of
+            Right (a, "") -> Right a
+            _ -> Left $ MsgInvalidNumber s
+
+    , fieldView = \theId name attrs val isReq -> [whamlet|
+$newline never
+                    <input id="#{theId}" name="#{name}" *{attrs} type="range">
+|]
+    , fieldEnctype = UrlEncoded
+    }
+  where showVal = either id (pack . show)
 
 
 
@@ -74,6 +140,7 @@ getQuarters n = do
                                 in  Just ( (nextQ, nextYr), (i+1, nextQ, nextYr ))) (1, currentQuarter,y)
     return $ map (\(q,yy) -> "Q"<> show q <> " " <> show yy) qys
 
+debugM str = debug str (pure ()) 
 mprint :: (MonadIO m, Show a) => a -> m ()
 mprint str = liftIO $ do
     print "-------------- START ---------------------"

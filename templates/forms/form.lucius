@@ -15,6 +15,7 @@ input[type="submit"], input[type="button"]{
   border-radius: 2px;
 }
 
+
 .label {
     color: #555;
     margin-bottom: -0.5em;
@@ -26,3 +27,4 @@ input[type="submit"], input[type="button"]{
 .inputBox{
     margin-top: 0.5em;
 }
+

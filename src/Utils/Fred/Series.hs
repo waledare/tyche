@@ -16,6 +16,7 @@ import Data.Text.Encoding
 import Data.Text( Text)
 import Import 
 import Prelude (read)
+import Text.Read(readMaybe)
 import Data.Maybe (fromJust)
 
 data FredSeries a  = FS {
@@ -30,7 +31,7 @@ instance ToJSON a => ToJSON (FredSeries a )
 instance Functor FredSeries where
     fmap f (FS au obs) = 
         let g :: (a -> b) -> Observation a -> Observation b
-            g f (Observation s e d v) = Observation s e d (f <$> v)
+            g f (Observation s e d v) = Observation s e d (fmap f v)
         in  FS au (map (g f) obs)
 
 inflation :: Text
@@ -44,6 +45,9 @@ unemployment = "UNRATE"
 
 interestrate :: Text
 interestrate = "FEDFUNDS"
+
+sp :: Text
+sp = "SP500"
 
 fredSettingsIO :: IO FredConfig 
 fredSettingsIO = do 
@@ -59,13 +63,27 @@ mkUrl (FredConfig endpt api ft) symbol =
                     <> api <> "&file_type=" <> ft
     in  unpack url 
 
+joinObservation (Observation s e d v) = (Observation s e d (join v))
+
 getSeriesIO :: FredConfig -> Text -> IO (Either String (FredSeries Double))
 getSeriesIO conf symbol = do 
+    ef <- getSeriesIO' conf symbol 
+    case ef of
+        Right (FS u os)  -> return (Right (FS u (map joinObservation os)))
+        Left str               -> return (Left str)
+
+
+readMaybe' x = case readMaybe x of
+                    Just b -> Right b
+                    Nothing -> Left   x
+
+getSeriesIO' :: FredConfig -> Text -> IO (Either String (FredSeries (Maybe Double)))
+getSeriesIO' conf symbol = do 
     let url = mkUrl conf symbol 
     ebytes <- getHttp url
     case ebytes of 
         Left e  -> return $ Left  $ show  e
-        Right x -> return ( fmap read <$> eitherDecode x)  
+        Right x -> return  ( fmap readMaybe <$> eitherDecode x)
 
 fredSettings :: Handler FredConfig 
 fredSettings = liftIO fredSettingsIO ----
@@ -90,9 +108,9 @@ getSeries  symbol = do
                     itis <- liftIO . dated . fromJust . maybeHead $ stat 
                     if itis
                         -- THIS MUST BE CHANGED
-                        --
-                        --
-                        --
+                        -- the delay before 
+                        -- new data is required
+                        -- needs to be revisited
                         --
                         --
                         --
@@ -150,10 +168,15 @@ getUnemployment = getSeries unemployment
 getGdp :: Handler (Maybe (TimeSeries Double))
 getGdp = getSeries gdp
 
+getSP :: Handler (Maybe (TimeSeries Double))
+getSP = getSeries sp 
+
 getMacro = do
     mint <- getInterestRate
     minf <- getInflation
     mun  <- getUnemployment
     ggdp <- getGdp
-    return $ map fromJust $ filter (isJust) [minf, mint, mun, ggdp] 
+    gsp  <- getSP
+    mprint gsp
+    return $ map fromJust $ filter (isJust) [minf, mint, mun, ggdp, gsp] 
 

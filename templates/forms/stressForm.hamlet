@@ -1,17 +1,25 @@
+#{extra}
 <div .inputBox>
     <div .inputPair> 
         <div .label>
             Inflation Rate
-        <div> 
-            ^{fvInput inflationView}
+        <div .sliderRow>
+            <div> 
+                ^{fvInput inflationView}
+            <div #inflation .valueWindow> 
+                100
     <div .inputPair> 
         <div .label>
             Interest Rate
-        <div> 
-            ^{fvInput interestView}
+        <div .sliderRow>
+            <div> 
+                ^{fvInput interestView}
+            <div #interest .valueWindow> 
     <div .inputPair> 
         <div .label>
             Unemployment Rate
-        <div> 
-            ^{fvInput unemploymentView}
-        
+        <div .sliderRow>
+            <div> 
+                ^{fvInput unemploymentView}
+            <div #unemployment .valueWindow> 
+    

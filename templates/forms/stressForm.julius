@@ -1,0 +1,24 @@
+function toPercent(x) {
+    return parseFloat (x).toFixed(2) + "%";
+}
+var inflationNub = document.getElementById("inflationNub");
+var inflation = document.getElementById("inflation");
+var interestNub = document.getElementById("interestNub");
+var interest = document.getElementById("interest");
+var unemploymentNub = document.getElementById("unemploymentNub");
+var unemployment = document.getElementById("unemployment");
+
+inflation.innerHTML = toPercent(inflationNub.value);
+interest.innerHTML = toPercent(interestNub.value);
+unemployment.innerHTML = toPercent(unemploymentNub.value);
+
+// Update the current slider value (each time you drag the slider handle)
+inflationNub.oninput = function() {
+  inflation.innerHTML = toPercent(this.value);
+}
+interestNub.oninput = function() {
+  interest.innerHTML = toPercent(this.value);
+}
+unemploymentNub.oninput = function() {
+  unemployment.innerHTML = toPercent(this.value);
+}

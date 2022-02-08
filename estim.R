@@ -3,14 +3,16 @@
 args = commandArgs(trailingOnly=TRUE)
 
 filname <- args[1]
+
+#filname <- "/tmp/temp4450-0.txt"
 df <- read.csv(filname)
 
-df[!is.na(df$GDPC1), ]
+#df[!is.na(df$GDPC1), ]
 colnames(df)[2] <- "y"
 
 inflation <- diff(log(df$CPIAUCSL))
 rate <- df$FEDFUNDS
-unemployment <- diff(log(df$UNRATE))
+unemployment <- ((df$UNRATE))[-1]
 port <- diff(log(df$y))
 
 #gdp <- diff(log(df$GDPC1))
