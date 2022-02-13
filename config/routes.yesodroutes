@@ -22,3 +22,5 @@
 /positions PositionsR GET
 
 /stress StressR GET POST
+
+/diagnosis DiagnosisR GET POST

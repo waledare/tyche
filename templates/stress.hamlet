@@ -1,5 +1,11 @@
+<h1>
+    Portfolio diagnostics
+<div .largeButtonBox>
+    <input .largeButton type=button 
+        value="Run diagnostics" 
+        onclick="getDiagnostics()">
 <h1> 
     Portfolio stress testing
-<form method=post action=@{StressR} enctype=#{formEnctype}>
+<form #stress method=post action=@{StressR} enctype=#{formEnctype}>
     ^{formWidget}
     <input type=submit>

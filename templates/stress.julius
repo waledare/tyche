@@ -1,0 +1,16 @@
+function getDiagnostics(){
+    $.ajax({
+      url: '@{StressR}',
+      type: 'POST',
+      contentType: "application/json",
+      data: JSON.stringify("Hey"),
+      success: function (data) {
+          console.log(data);
+          document.getElementById('diagnostic').innerHTML = data;
+      },
+      error: function (data) {
+        console.log("Error: " + data);
+      },
+    });
+}
+

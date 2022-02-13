@@ -25,6 +25,16 @@ newtype TimeSeries a = TS {
 } deriving (Show, Eq, Read)
 -}
 
+data ROut = ROut {
+    betas :: [Double],
+    sigmas :: [Double],
+    capmRsquare :: Double,
+    model :: [String]
+} deriving (Show, Generic)
+
+instance FromJSON ROut 
+instance ToJSON ROut 
+
 data DataStatus = Unavailable | OutDated | UpToDate deriving (Eq, Show)
 
 type Exchange = Text
@@ -122,3 +132,5 @@ instance FromJSON ResponseMsg
 
 derivePersistField "MarketData"
 
+data Health = Robust | Average | Fragile deriving (Generic, Show)
+instance ToJSON Health 

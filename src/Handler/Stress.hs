@@ -8,7 +8,8 @@ module Handler.Stress where
 
 import Import hiding  (share)
 import Utils.Functions
-import Utils.Yahoo.Portfolio (getPrices)
+import Data.Aeson (eitherDecode, decode)
+import Utils.Yahoo.Portfolio ( getSP, getPrices)
 import Utils.Fred.Series (getMacro)
 import Utils.TimeSeries
 import qualified Prelude as P
@@ -16,6 +17,8 @@ import System.Directory (removeFile, getTemporaryDirectory)
 import System.Process
 import System.IO (hPutStr, openTempFile)
 import System.FilePath.Posix (dropExtension)
+import qualified Data.Text as T
+import qualified Data.ByteString.Lazy.Char8 as C
 
 stressForm :: Html -> MForm Handler (FormResult Shocks  , Widget)
 stressForm extra = do 
@@ -68,6 +71,7 @@ portfolioSeries  (Portfolio _ ps) = do
         then return $ TS [] Nothing []
         else return $ cumTS (+) tss 
 
+
 writeTemp :: String -> IO P.FilePath
 writeTemp str = do 
     tmpDir <- getTemporaryDirectory 
@@ -79,11 +83,11 @@ writeTemp str = do
 scriptPath :: P.FilePath 
 scriptPath = "estim.R"
 
-runRCode :: P.FilePath -> IO String
+runRCode :: P.FilePath -> IO (Maybe ROut)
 runRCode  path = do
-    let estimateFile = dropExtension path ++ ".coef"
+    let estimateFile = dropExtension path ++ ".json"
     system $ "Rscript " ++ scriptPath ++ " " ++ path 
-    res <- P.readFile estimateFile  
+    res <- decode <$> C.readFile estimateFile  
     removeFile path
     removeFile estimateFile
     return res
@@ -94,6 +98,8 @@ getStressR = do
     userPositions' <- runDB $ 
         selectList 
             [PortfolioUserId ==. userkey][LimitTo 1]
+    let str :: Maybe Health
+        str = Nothing 
     if null userPositions' 
         then redirect PortfolioR
         else do
@@ -101,8 +107,7 @@ getStressR = do
             defaultLayout 
                     $(widgetFile "stress")
 
-
-postStressR :: Handler Value
+postStressR :: Handler Html
 postStressR  = do
     Entity userkey _ <- requireAuth
     ((result, formWidget), formEnctype) <- runFormPost stressForm
@@ -115,30 +120,26 @@ postStressR  = do
                     portfolioPortfolio . entityVal . mhead $ userPositions' 
             port <- portfolioSeries (Portfolio userkey userPositions)  
             ms <- getMacro
-            debugM "Just after getMacro" 
-            let df = tsRowBind  (port : ms)
+            sp <- fmap priceSeries' <$> getSP
+            let df = case sp of 
+                        Just spp -> tsRowBind  (port : (ms++ [spp]))
+                        Nothing  -> tsRowBind  (port : ms)
                 dfStr = printFrame df
-                parse = map (mtail . dropWhile (/= ',')) . mtail . lines
             str <- liftIO $ do
                         tempFile <- writeTemp $ unpack dfStr
-                        runRCode tempFile 
-            mprint $ parse str
-            mprint  str
-            let [c, i, r, u] = (map P.read . parse $ str) :: [Double]
-                model = Model1 c i r u
-                effect = computeEffect model shocks 
-            return $ toJSON effect
-        FormFailure er  -> return $ toJSON er 
-        _                  -> return $ toJSON ("Failed" :: String) 
+                        fmap assessHealth <$> runRCode tempFile 
+            defaultLayout 
+                    $(widgetFile "stress")
+        _                  -> redirect StressR
     
 -- Show the effect on the prtfolio 
 -- I  need the betas . I need the changes
 -- 1. Data tyoe for the betas. Another for the shocks
 data Model1 = Model1 {
-    intercept1 :: Double,
-    inflation1 :: Double,
-    interest1  :: Double,
-    unemployment1 :: Double
+    intercept1 :: (Double, Double), 
+    inflation1 :: (Double, Double),
+    interest1  :: (Double, Double),
+    unemployment1 :: (Double, Double)
 } deriving (Show) 
 
 data Shocks = Shocks {
@@ -150,7 +151,7 @@ data Shocks = Shocks {
 type Effect = Double 
 
 computeEffect :: Model1 -> Shocks -> Effect
-computeEffect (Model1 _ i r u) (Shocks is rs us) = i*is + r*rs + u*us
+computeEffect (Model1 _ (i,_) (r,_) (u,_)) (Shocks is rs us) = i*is + r*rs + u*us
 
 -- Comute effect and display.
 -- What people want is reassurance
@@ -170,3 +171,19 @@ computeEffect (Model1 _ i r u) (Shocks is rs us) = i*is + r*rs + u*us
 -- 1. the a large part of the vol is idiosyncratic or reliant on other factors
 -- 2. vol is relatively large
 -- So variance decomposition is key. We need a VAR model.
+--
+-- map (Prelude.tail . (C.split ',')) . Prelude.tail . C.lines <$> C.readFile
+--
+
+assessHealth :: ROut -> Health 
+assessHealth (ROut bs ss rs _) = 
+    -- bs is the vector of betas, including 
+    -- market beta cm
+    -- rs is the R-quare relative to 
+    -- the CAPM model
+    let [_, _, _, _, cm] = bs
+    in if rs > 0.7 && cm < 1 
+            then Robust 
+            else if rs < 0.4 && cm > 1
+                then Fragile 
+                else Average 

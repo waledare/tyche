@@ -1,3 +1,12 @@
+.largeButtonBox{
+    display: flex;
+    justify-content: center;
+}
+.largeButton{
+    width: 40%;
+    padding: 2%;
+    margin: 2%;
+}
 hr {
   display: block;
   margin-top: 0.5em;

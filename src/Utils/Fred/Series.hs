@@ -176,7 +176,5 @@ getMacro = do
     minf <- getInflation
     mun  <- getUnemployment
     ggdp <- getGdp
-    gsp  <- getSP
-    mprint gsp
-    return $ map fromJust $ filter (isJust) [minf, mint, mun, ggdp, gsp] 
+    return $ map fromJust $ filter (isJust) [minf, mint, mun, ggdp] 
 

@@ -160,7 +160,16 @@ groupBy p' (x':xs') = (x' : ys') : zs'
   where
     (ys',zs') = go p' x' xs'
     go p z (x:xs)
-      | p z x = trace (show z ++ "\t" ++ show x ++ "\n\n\n\n") $ (x : ys, zs)
+      | p z x = trace (show z ++ "\t" ++ show x ++ "\n\n\n\n")  (x : ys, zs)
       | otherwise =  ([], (x : ys) : zs)
       where (ys,zs) = go p x xs
     go _ _ [] = ([], [])
+
+
+sgn :: (Ord a, Num a) => a -> a
+sgn x = if x > 0 then 1 else -1
+
+mlog :: Double -> Double 
+mlog x | x  > 0 = -log x
+       | x == 0 = 15
+       | otherwise = 15 +   (abs . log . abs $ x )

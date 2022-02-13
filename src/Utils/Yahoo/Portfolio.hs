@@ -4,7 +4,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Utils.Yahoo.Portfolio where
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Utils.Functions (mtail, mhead, maybeHead, mlast,secondsToUTC)
+import Utils.Functions (debugM, mtail, mhead, maybeHead, mlast,secondsToUTC)
 import Database.Persist.TH
 import Import (loadYamlSettings, 
                 PriceStats,
@@ -34,6 +34,8 @@ data ChartRes = ChartRest {
     chart :: Result 
 }deriving (Show, Generic)
 instance FromJSON ChartRes
+
+
 
 yahooSettings :: Handler YahooConfig
 yahooSettings = appYahooConfig . appSettings <$> getYesod
@@ -70,13 +72,17 @@ computeReturns ps =
 
 type Range = String
 
+sp = "^SP500TR"
+
+getSP =  getPrices sp
+
 getPricesIO' :: Range -> YahooConfig ->  Text -> IO (Either String ChartRes)
 getPricesIO' range yahooSettings symbol = do 
     let url = unpack . getPricesUrl symbol $ yahooSettings
-        hurl = takeWhile (/= '2') url
-        turl = mtail . mtail . mtail . dropWhile (/= '2') $ url
+        -- hurl = takeWhile (/= '2') url
+        -- turl = mtail . mtail . mtail . dropWhile (/= '2') $ url
     either (Left . show ) eitherDecode 
-        <$> robustHttpIO yahooSettings (if null range then url else hurl <> range<> turl)
+        <$> robustHttpIO yahooSettings url
  
 getPricesIO :: Range -> YahooConfig ->  Text -> IO (Maybe ResponseMsg)
 getPricesIO range yahooSettings symbol = do
@@ -127,7 +133,6 @@ getPrices  symbol = do
                                 return . Just $ Chart symbol $ quoteSummary charts 
                 Nothing    -> return Nothing
         OutDated -> do
-            error $ unpack symbol
             now <- liftIO getCurrentTime 
             let end = priceStatsEnd . fromJust . maybeHead $ stat
                 (_, nowMonth, nowYear)  = toGregorian . utctDay $ now 
@@ -152,10 +157,13 @@ getPrices  symbol = do
                                 let oldcs = close . mhead . quote . 
                                                 indicators . pricesPrices $ ps
                                     ots   = timestamp . pricesPrices $ ps 
-                                    npairs = filter ( (`notElem` ots) . fst ) 
-                                                    $ zip newts newcs
-                                    uts = map fst npairs ++ ots
-                                    ucs = map snd npairs ++ oldcs
+                                    -- npairs = filter ( (`notElem` ots) . fst ) 
+                                    --                 $ zip newts newcs
+                                    npairs = zip newts newcs
+                                    -- uts = map fst npairs ++ ots
+                                    uts = map fst npairs 
+                                    -- ucs = map snd npairs ++ oldcs
+                                    ucs = map snd npairs 
                                     mcs = MarketData uts (Indicator [Ohlc ucs])
                                     newEnd = secondsToUTC $ mhead newts
                                 runDB $ do 

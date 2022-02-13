@@ -1,0 +1,22 @@
+var robustness = 0;
+function documentReady(){
+    $.ajax({
+      url: '@{DiagnosisR}',
+      type: 'POST',
+      contentType: "application/json",
+      success: function (data) {
+          var g = new JustGage({
+                id: "gauge",
+                value: data,
+                min: 0,
+                max: 100,
+                title: "Portfolio robustness"
+              });
+      },
+      error: function (data) {
+        console.log("Error: " + data);
+      },
+    });
+}
+
+
