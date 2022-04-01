@@ -20,6 +20,7 @@ Portfolio json
     userId UserId 
     portfolio [Position]
     UniquePortfolio userId 
+    deriving Read
 Prices json
     symbol Text
     prices MarketData

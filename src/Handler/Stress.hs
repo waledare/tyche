@@ -95,17 +95,23 @@ runRCode  path = do
 getStressR :: Handler Html
 getStressR = do
     Entity userkey _ <- requireAuth
+    {-
     userPositions' <- runDB $ 
         selectList 
             [PortfolioUserId ==. userkey][LimitTo 1]
+    -}
+    mps <- lookupSession "positions" 
     let str :: Maybe Health
         str = Nothing 
-    if null userPositions' 
-        then redirect PortfolioR
-        else do
-            (formWidget, formEnctype) <- generateFormPost stressForm
-            defaultLayout 
-                    $(widgetFile "stress")
+    case mps of
+        Just userPositions' ->
+            if null userPositions' 
+                then redirect PortfolioR
+                else do
+                    (formWidget, formEnctype) <- generateFormPost stressForm
+                    defaultLayout 
+                            $(widgetFile "stress")
+        Nothing -> redirect HomeR 
 
 postStressR :: Handler Html
 postStressR  = do

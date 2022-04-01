@@ -9,7 +9,7 @@ module Handler.Portfolio where
 
 import Utils.Universe
 import Utils.Yahoo.Portfolio
-import Utils.Functions (mprint, maybeHead)
+import Utils.Functions (toText, mprint, maybeHead)
 import Import
 import Data.List ((!!))
 
@@ -57,6 +57,9 @@ putPortfolioR :: Handler Value
 putPortfolioR = do 
     Entity userkey _ <- requireAuth
     selections <- requireCheckJsonBody :: Handler [Position]
+    {-
     runDB $ upsert  (Portfolio userkey selections) 
                     [PortfolioPortfolio =. selections]
+    -}
+    setSession "positions" $ toText selections 
     return $ toJSON ( "Success" :: Text) 

@@ -7,6 +7,7 @@ module Handler.Diagnosis where
 
 import Import
 import Utils.Functions
+import Text.Read (read)
 import Utils.Yahoo.Portfolio
 import Utils.TimeSeries
 import Utils.Fred.Series hiding (getSP)
@@ -15,14 +16,20 @@ import Handler.Stress (runRCode, assessHealth, writeTemp, portfolioSeries)
 postDiagnosisR :: Handler Value
 postDiagnosisR = do 
     Entity userkey _ <- requireAuth
+    {-
     userPositions' <- runDB $ 
         selectList 
         [PortfolioUserId ==. userkey][LimitTo 1]
+    -}
+    mps <- lookupSession "positions"
+    let userPositions' = 
+            case mps of
+                Just ps -> read . unpack $ ps
+                Nothing -> []
     if null userPositions'
         then redirect PortfolioR
         else do
-            let userPositions = 
-                    portfolioPortfolio . entityVal . mhead $ userPositions' 
+            let userPositions = userPositions' 
             port <- portfolioSeries (Portfolio userkey userPositions)  
             ms <- getMacro
             sp <- fmap priceSeries' <$> getSP
